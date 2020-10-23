@@ -2,14 +2,20 @@ package main
 
 import (
 	"log"
+	"time"
 	"net/http"
 	"github.com/gorilla/mux"
 	"html/template"
 )
 
 func index(w http.ResponseWriter, req *http.Request) {
-	tmp := template.Must(template.ParseFiles("templates/index.html"))
-	err := tmp.Execute(w, nil)
+	tmp := template.New("_func").Funcs(template.FuncMap{
+        "getDate": func() time.Time {
+            return time.Now()
+		},
+	})
+	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
+	err := tmp.ExecuteTemplate(w, "index.html", nil)
  
     if err != nil {
         panic(err)
@@ -17,8 +23,13 @@ func index(w http.ResponseWriter, req *http.Request) {
 }
 
 func signUpSender(w http.ResponseWriter, req *http.Request) {
-	tmp := template.Must(template.ParseFiles("templates/signUpSender.html"))
-	err := tmp.Execute(w, nil)
+	tmp := template.New("_func").Funcs(template.FuncMap{
+        "getDate": func() time.Time {
+            return time.Now()
+		},
+	})
+	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
+	err := tmp.ExecuteTemplate(w, "signUpSender.html", nil)
  
     if err != nil {
         panic(err)
