@@ -46,11 +46,11 @@ func main() {
     http.Handle("/", r)
 
 	s := &http.Server{
-		Addr: ":8080",
+		Addr: ":5000",
 		Handler: nil,
 	}
 
-	log.Println("Listening on :8080...")
+	log.Println("Listening on :5000...")
 	err := s.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
