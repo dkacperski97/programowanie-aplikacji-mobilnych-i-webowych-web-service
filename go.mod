@@ -1,4 +1,4 @@
-module example.com/brew
+module example.com/project
 
 go 1.15
 
