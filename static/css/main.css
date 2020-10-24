@@ -61,14 +61,19 @@ form li {
     flex: 1 500px;
     padding: .5rem;
 }
-form label {
-    display: block;
-    margin-bottom: .25rem;
-}
 form input {
     display: block;
     width: 100%;
 }
-form label::after {
+form label.input-name {
+    display: block;
+    margin-bottom: .25rem;
+}
+form label.input-name::after {
     content: ':';
+}
+label.error-message {
+    display: block;
+    color: red;
+    margin-top: .25rem;
 }
