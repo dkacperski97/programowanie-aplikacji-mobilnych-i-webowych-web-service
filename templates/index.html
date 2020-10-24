@@ -1,18 +1,19 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <link rel="stylesheet" href="/static/css/main.css">
         <script src="/static/main.js" defer></script>
     </head>
     <body>
         {{ template "header.html" }}
-        <form action="https://infinite-hamlet-29399.herokuapp.com/register" method="POST">
-            <ul>
-                <li><input type="text" id="firstname" name="firstname" placeholder="Imię" /></li>
-                <li><input type="text" id="lastname" name="lastname" placeholder="Nazwisko" /></li>
-                <li><input type="text" id="username" name="username" placeholder="Nazwa użytkownika" /></li>
-                <li><input type="submit" name="submit" value="Zarejestruj" /></li>
-            </ul>
-        </form>
+        <main class="home">
+            <img src="/static/img/undraw_heavy_box_agqi.svg" alt="Heavy box">
+            <section>
+                <h2>Tytuł jakiś</h2>
+                <p>Dłuższy opis firmy dostawczej</p>
+                <a href="./sender/sign-up">Zarejestruj</a>
+            </section>
+        </main>
         {{ template "footer.html" }}
     </body>
 </html>
