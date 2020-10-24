@@ -1,6 +1,7 @@
 package main
 
 import (
+	"os"
 	"log"
 	"time"
 	"net/http"
@@ -44,13 +45,18 @@ func main() {
 	r.HandleFunc("/", index)
 	r.HandleFunc("/sender/sign-up", signUpSender)
     http.Handle("/", r)
+	
+	port := os.Getenv("PORT")
+	if port == "" {
+		port = "5000"
+	}
 
 	s := &http.Server{
-		Addr: ":5000",
+		Addr: ":" + port,
 		Handler: nil,
 	}
 
-	log.Println("Listening on :5000...")
+	log.Println("Listening on :" + port + "...")
 	err := s.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
