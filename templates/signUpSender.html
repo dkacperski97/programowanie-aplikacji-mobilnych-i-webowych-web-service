@@ -8,7 +8,7 @@
         {{ template "top.html" }}
         <main class="sign-up">
             <h2>Rejestracja przewoźnika</h2>
-            <form action="https://infinite-hamlet-29399.herokuapp.com/sender/register" method="POST" enctype="multipart/form-data">
+            <form id="signUpForm" action="https://infinite-hamlet-29399.herokuapp.com/sender/register" method="POST" enctype="multipart/form-data">
                 <ul>
                     <li>
                         <label class="input-name" for="firstname">Imię</label>
@@ -20,11 +20,11 @@
                     </li>
                     <li>
                         <label class="input-name" for="password">Hasło</label>
-                        <input required type="password" id="password" name="password" pattern="[A-Za-z]{8,}" />
+                        <input required type="password" id="password" name="password" pattern=".{8,}" />
                     </li>
                     <li>
                         <label class="input-name" for="passwordConfirmation">Potwierdź hasło</label>
-                        <input required type="password" id="passwordConfirmation" name="passwordConfirmation" pattern="[A-Za-z]{8,}" />
+                        <input required type="password" id="passwordConfirmation" pattern=".{8,}" />
                     </li>
                     <li>
                         <label class="input-name" for="photo">Zdjęcie</label>
@@ -42,7 +42,7 @@
                         <label class="input-name" for="login">Nazwa użytkownika</label>
                         <input required type="text" id="login" name="login" pattern="[a-z]{3,12}"/>
                     </li>
-                    <li class="submit-button-container"><button type="submit" name="submit" id="submit">Zarejestruj</button></li>
+                    <li class="submit-button-container"><button type="submit" name="submitButton" id="submitButton">Zarejestruj</button></li>
                 </ul>
             </form>
         </main>

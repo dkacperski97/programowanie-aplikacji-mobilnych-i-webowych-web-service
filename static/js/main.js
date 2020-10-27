@@ -1,4 +1,46 @@
 const errorLabelClassName = "error-message";
+const validations = [
+    {
+        id: 'firstname',
+        message: 'Imię powinno zawierać przynajmniej 2 znaki, wszystkie powinny pochodzić z polskiego alfabetu i tylko pierwszy znak powinien być dużą literą.',
+    },
+    {
+        id: 'lastname',
+        message: 'Nazwisko powinno zawierać przynajmniej 2 znaki, wszystkie powinny pochodzić z polskiego alfabetu i tylko pierwszy znak powinien być dużą literą.',
+    },
+    {
+        id: 'login',
+        message: 'Nazwa użytkownika powinna składać się wyłącznie z małych liter i mieć długość od 3 do 12 znaków.',
+        callback: async (input) => {
+            const inputValue = input.value;
+            const res = await fetch(`https://infinite-hamlet-29399.herokuapp.com/check/${inputValue}`);
+            if (input.value !== inputValue) {
+                throw new Error('Value has changed');
+            }
+            if (res.status !== 200) {
+                return 'Nie można obecnie sprawdzić czy podana nazwa użytkownika jest dostępna.';
+            }
+            const value = await res.json()
+            return value[inputValue] !== 'available'
+                ? 'Podana nazwa użytkownika jest niedostępna.'
+                : null;
+        }
+    },
+    {
+        id: 'password',
+        message: 'Hasło powinno składać się z przynajmniej 8 znaków.'
+    },
+    {
+        id: 'passwordConfirmation',
+        message: 'Hasło powinno składać się z przynajmniej 8 znaków.',
+        callback: (input) => {
+            const password = document.getElementById('password');
+            return password.value !== input.value
+                ? 'Hasła powinny się pokrywać.'
+                : null;
+        }
+    }
+]
 
 function addErrorLabel(input, error) {
     const label = document.createElement("label");
@@ -15,27 +57,58 @@ function removeErrorLabel(input) {
     }
 }
 
-function attachEvents() {
-    const login = document.getElementById("login");
-    login.addEventListener("input", (e) => {
-        const loginValue = e.target.value;
-        removeErrorLabel(login);
-        if (login.validity.valid) {
-            fetch(`https://infinite-hamlet-29399.herokuapp.com/check/${loginValue}`).then((res) => {
-                if (login.value === loginValue) {
-                    if (res.status === 200) {
-                        res.json().then((value) => {
-                            if (value[loginValue] !== 'available') {
-                                addErrorLabel(login, 'Podana nazwa użytkownika jest niedostępna.');
-                            }
-                        });
-                    } else {
-                        addErrorLabel(login, 'Nie można obecnie sprawdzić czy podana nazwa użytkownika jest dostępna.');
-                    }
-                }
-            });
-        } else {
-            addErrorLabel(login, 'Nazwa użytkownika powinna składać się wyłącznie z małych liter i mięć długość od 3 do 12 znaków.');
+async function getValidationMessage(validation, input) {
+    if (input.validity.valid) {
+        if (validation.callback) {
+            return await validation.callback(input);
+        }
+    } else {
+        return validation.message;
+    }
+}
+
+async function validateInput(validation, input) {
+    console.log('2')
+    let message;
+    try {
+        message = await getValidationMessage(validation, input)
+    } catch(e) {
+        console.log(e)
+        return;
+    }
+    console.log(message)
+    removeErrorLabel(input);
+    if (message) {
+        addErrorLabel(input, message);
+    }
+}
+
+function attachEvents() {    
+    validations.forEach((validation) => {
+        const input = document.getElementById(validation.id);
+        input.addEventListener('input', async (e) => validateInput(validation, e.target));
+    })
+
+    const form = document.getElementById('signUpForm');
+    form.noValidate = true;
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const validateInputs = [
+            ...validations,
+            {
+                id: 'sex',
+                message: 'Pole jest obowiązkowe.'
+            }
+        ].map(async (validation) => {
+            const input = document.getElementById(validation.id);
+            await validateInput(validation, input);
+        })
+        
+        await Promise.all(validateInputs)
+
+        const errorLabels = form.getElementsByClassName(errorLabelClassName);
+        if (errorLabels.length === 0) {
+            form.submit();
         }
     });
 }
