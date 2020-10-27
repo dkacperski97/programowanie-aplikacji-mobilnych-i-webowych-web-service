@@ -16,26 +16,26 @@ function removeErrorLabel(input) {
 }
 
 function attachEvents() {
-    const username = document.getElementById("username");
-    username.addEventListener("input", (e) => {
-        const usernameValue = e.target.value;
-        removeErrorLabel(username);
-        if (username.value) {
-            fetch(`https://infinite-hamlet-29399.herokuapp.com/check/${usernameValue}`).then((res) => {
-                if (username.value === usernameValue) {
+    const login = document.getElementById("login");
+    login.addEventListener("input", (e) => {
+        const loginValue = e.target.value;
+        removeErrorLabel(login);
+        if (login.validity.valid) {
+            fetch(`https://infinite-hamlet-29399.herokuapp.com/check/${loginValue}`).then((res) => {
+                if (login.value === loginValue) {
                     if (res.status === 200) {
                         res.json().then((value) => {
-                            if (value[usernameValue] !== 'available') {
-                                addErrorLabel(username, 'Podana nazwa użytkownika jest niedostępna.');
+                            if (value[loginValue] !== 'available') {
+                                addErrorLabel(login, 'Podana nazwa użytkownika jest niedostępna.');
                             }
                         });
                     } else {
-                        addErrorLabel(username, 'Nie można obecnie sprawdzić czy podana nazwa użytkownika jest dostępna.');
+                        addErrorLabel(login, 'Nie można obecnie sprawdzić czy podana nazwa użytkownika jest dostępna.');
                     }
                 }
             });
         } else {
-            addErrorLabel(username, 'Nazwa użytkownika jest wymagana.');
+            addErrorLabel(login, 'Nazwa użytkownika powinna składać się wyłącznie z małych liter i mięć długość od 3 do 12 znaków.');
         }
     });
 }

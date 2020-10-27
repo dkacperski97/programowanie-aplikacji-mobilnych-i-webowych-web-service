@@ -11,30 +11,38 @@
             <form action="https://infinite-hamlet-29399.herokuapp.com/sender/register" method="POST" enctype="multipart/form-data">
                 <ul>
                     <li>
-                        <label class="input-name" for="firstName">Imię</label>
-                        <input type="text" id="firstName" name="firstName" />
+                        <label class="input-name" for="firstname">Imię</label>
+                        <input required type="text" id="firstname" name="firstname" pattern="[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+" />
                     </li>
                     <li>
-                        <label class="input-name" for="lastName">Nazwisko</label>
-                        <input type="text" id="lastName" name="lastName" />
+                        <label class="input-name" for="lastname">Nazwisko</label>
+                        <input required type="text" id="lastname" name="lastname" pattern="[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+" />
                     </li>
                     <li>
                         <label class="input-name" for="password">Hasło</label>
-                        <input type="password" id="password" name="password" />
+                        <input required type="password" id="password" name="password" pattern="[A-Za-z]{8,}" />
                     </li>
                     <li>
                         <label class="input-name" for="passwordConfirmation">Potwierdź hasło</label>
-                        <input type="password" id="passwordConfirmation" name="passwordConfirmation" />
+                        <input required type="password" id="passwordConfirmation" name="passwordConfirmation" pattern="[A-Za-z]{8,}" />
                     </li>
                     <li>
                         <label class="input-name" for="photo">Zdjęcie</label>
                         <input type="file" accept="image/png, image/jpeg" id="photo" name="photo" />
                     </li>
                     <li>
-                        <label class="input-name" for="username">Nazwa użytkownika</label>
-                        <input type="text" id="username" name="username" />
+                        <label class="input-name" for="sex">Płeć</label>
+                        <select required name="sex" id="sex">
+                            <option value="">--Wybierz płeć--</option>
+                            <option value="F">Kobieta</option>
+                            <option value="M">Mężczyzna</option>
+                        </select>
                     </li>
-                    <li><input type="submit" name="submit" value="Zarejestruj" /></li>
+                    <li>
+                        <label class="input-name" for="login">Nazwa użytkownika</label>
+                        <input required type="text" id="login" name="login" pattern="[a-z]{3,12}"/>
+                    </li>
+                    <li class="submit-button-container"><button type="submit" name="submit" id="submit">Zarejestruj</button></li>
                 </ul>
             </form>
         </main>
