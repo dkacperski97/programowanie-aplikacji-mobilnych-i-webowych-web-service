@@ -103,5 +103,16 @@ label.error-message {
 }
 .submit-button-container {
     display: flex;
-    align-items: flex-end;
+    align-content: flex-start;
+    flex-wrap: wrap;
+}
+.submit-button-container::before {
+    content: "_";
+    width: 100%;
+    margin-bottom: .25rem;
+    display: block;
+    opacity: 0;
+}
+.submit-button-container button {
+    flex: 1 1 auto;
 }
