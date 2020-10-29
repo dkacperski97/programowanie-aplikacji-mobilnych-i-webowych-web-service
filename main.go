@@ -9,13 +9,16 @@ import (
 	"html/template"
 )
 
-func index(w http.ResponseWriter, req *http.Request) {
+func getTemplates() *template.Template {
 	tmp := template.New("_func").Funcs(template.FuncMap{
-        "getDate": func() time.Time {
-            return time.Now()
-		},
+        "getDate": time.Now,
 	})
 	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
+	return tmp
+}
+
+func index(w http.ResponseWriter, req *http.Request) {
+	tmp := getTemplates()
 	err := tmp.ExecuteTemplate(w, "index.html", nil)
  
     if err != nil {
@@ -24,12 +27,7 @@ func index(w http.ResponseWriter, req *http.Request) {
 }
 
 func signUpSender(w http.ResponseWriter, req *http.Request) {
-	tmp := template.New("_func").Funcs(template.FuncMap{
-        "getDate": func() time.Time {
-            return time.Now()
-		},
-	})
-	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
+	tmp := getTemplates()
 	err := tmp.ExecuteTemplate(w, "signUpSender.html", nil)
  
     if err != nil {
@@ -56,7 +54,7 @@ func main() {
 		Handler: nil,
 	}
 
-	log.Println("Listening on :" + port + "...")
+	log.Println("Listening on :" + port + " ...")
 	err := s.ListenAndServe()
 	if err != nil {
 		log.Fatal(err)
