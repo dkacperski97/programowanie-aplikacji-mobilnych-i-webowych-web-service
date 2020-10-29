@@ -8,6 +8,9 @@
     --color-third: #f5f5f7;
     --color-third-brighter: #fff;
     --color-third-contrast: #333;
+    --color-fourth: #f00;
+    --color-fourth-brighter: #f44;
+    --color-fourth-contrast: #fff;
 }
 html, body, button, input, textarea, select {
     font-family: 'Roboto', sans-serif;
@@ -162,7 +165,7 @@ form option[value=""] {
 }
 label.error-message {
     display: block;
-    color: red;
+    color: var(--color-fourth);
     margin-top: .25rem;
 }
 .submit-button-container {
