@@ -1,5 +1,5 @@
 const errorLabelClassName = "error-message";
-const validations = [
+const inputsValidations = [
     {
         id: 'firstname',
         message: 'Imię powinno zawierać przynajmniej 2 znaki, wszystkie powinny pochodzić z polskiego alfabetu i tylko pierwszy znak powinien być dużą literą.',
@@ -42,66 +42,66 @@ const validations = [
     }
 ]
 
-function addErrorLabel(input, error) {
+function addErrorLabel(control, error) {
     const label = document.createElement("label");
-    label.setAttribute('for', input.id)
+    label.setAttribute('for', control.id)
     label.classList.add(errorLabelClassName);
     label.textContent = error;
-    input.after(label);
+    control.after(label);
 }
 
-function removeErrorLabel(input) {
-    const label = input.nextElementSibling;
+function removeErrorLabel(control) {
+    const label = control.nextElementSibling;
     if (label !== null && label.classList.contains(errorLabelClassName)) {
         label.remove();
     }
 }
 
-async function getValidationMessage(validation, input) {
-    if (input.validity.valid) {
+async function getValidationMessage(validation, control) {
+    if (control.validity.valid) {
         if (validation.callback) {
-            return await validation.callback(input);
+            return await validation.callback(control);
         }
     } else {
         return validation.message;
     }
 }
 
-async function validateInput(validation, input) {
-    removeErrorLabel(input);
+async function validateControl(validation, control) {
+    removeErrorLabel(control);
     let message;
     try {
-        message = await getValidationMessage(validation, input)
+        message = await getValidationMessage(validation, control)
     } catch(e) {
         return;
     }
     if (message) {
-        addErrorLabel(input, message);
+        addErrorLabel(control, message);
     }
 }
 
 function attachEvents() {    
-    validations.forEach((validation) => {
+    inputsValidations.forEach((validation) => {
         const input = document.getElementById(validation.id);
-        input.addEventListener('input', async (e) => validateInput(validation, e.target));
+        input.addEventListener('input', async (e) => validateControl(validation, e.target));
     })
 
     const form = document.getElementById('signUpForm');
     form.noValidate = true;
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
-        const validateInputs = [
-            ...validations,
+        const validations = [
+            ...inputsValidations,
             {
                 id: 'sex',
                 message: 'Pole jest obowiązkowe.'
             }
         ].map(async (validation) => {
-            const input = document.getElementById(validation.id);
-            await validateInput(validation, input);
+            const control = document.getElementById(validation.id);
+            await validateControl(validation, control);
         })
         
-        await Promise.all(validateInputs)
+        await Promise.all(validations)
 
         const errorLabels = form.getElementsByClassName(errorLabelClassName);
         if (errorLabels.length === 0) {
