@@ -1,51 +1,72 @@
 <!DOCTYPE html>
 <html>
-    <head>
-        {{ template "head.html" }}
-        <script src="/static/js/signUpSender.js" defer></script>
-    </head>
-    <body>
-        {{ template "header.html" }}
-        <main class="sign-up">
-            <h2>Rejestracja przewoźnika</h2>
-            <form id="signUpForm" action="https://infinite-hamlet-29399.herokuapp.com/sender/register" method="POST" enctype="multipart/form-data">
-                <ul>
-                    <li>
-                        <label class="input-name" for="firstname">Imię</label>
-                        <input required type="text" id="firstname" name="firstname" pattern="[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+" />
-                    </li>
-                    <li>
-                        <label class="input-name" for="lastname">Nazwisko</label>
-                        <input required type="text" id="lastname" name="lastname" pattern="[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+" />
-                    </li>
-                    <li>
-                        <label class="input-name" for="password">Hasło</label>
-                        <input required type="password" id="password" name="password" pattern=".{8,}" />
-                    </li>
-                    <li>
-                        <label class="input-name" for="passwordConfirmation">Potwierdź hasło</label>
-                        <input required type="password" id="passwordConfirmation" pattern=".{8,}" />
-                    </li>
-                    <li>
-                        <label class="input-name" for="photo">Zdjęcie</label>
-                        <input type="file" accept="image/png, image/jpeg" id="photo" name="photo" />
-                    </li>
-                    <li>
-                        <label class="input-name" for="sex">Płeć</label>
-                        <select required name="sex" id="sex">
-                            <option value="">--Wybierz płeć--</option>
-                            <option value="F">Kobieta</option>
-                            <option value="M">Mężczyzna</option>
-                        </select>
-                    </li>
-                    <li>
-                        <label class="input-name" for="login">Nazwa użytkownika</label>
-                        <input required type="text" id="login" name="login" pattern="[a-z]{3,12}"/>
-                    </li>
-                    <li class="submit-button-container"><button class="regular-action" type="submit" name="submitButton" id="submitButton">Zarejestruj</button></li>
-                </ul>
-            </form>
-        </main>
-        {{ template "footer.html" }}
-    </body>
+	<head>
+		{{ template "head.html" }}
+		<script src="/static/js/signUpSender.js" defer></script>
+	</head>
+	<body>
+		{{ template "header.html" }}
+		<main class="sign-up">
+			<h2>Rejestracja przewoźnika</h2>
+			<form
+				id="signUpForm"
+				action="https://infinite-hamlet-29399.herokuapp.com/sender/register"
+				method="POST"
+				enctype="multipart/form-data"
+			>
+				<ul>
+					<li>
+						<label class="input-name" for="firstname">Imię</label>
+						<input
+							required
+							type="text"
+							id="firstname"
+							name="firstname"
+							pattern="[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+"
+						/>
+					</li>
+					<li>
+						<label class="input-name" for="lastname">Nazwisko</label>
+						<input
+							required
+							type="text"
+							id="lastname"
+							name="lastname"
+							pattern="[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+"
+						/>
+					</li>
+					<li>
+						<label class="input-name" for="password">Hasło</label>
+						<input required type="password" id="password" name="password" pattern=".{8,}" />
+					</li>
+					<li>
+						<label class="input-name" for="passwordConfirmation">Potwierdź hasło</label>
+						<input required type="password" id="passwordConfirmation" pattern=".{8,}" />
+					</li>
+					<li>
+						<label class="input-name" for="photo">Zdjęcie</label>
+						<input type="file" accept="image/png, image/jpeg" id="photo" name="photo" />
+					</li>
+					<li>
+						<label class="input-name" for="sex">Płeć</label>
+						<select required name="sex" id="sex">
+							<option value="">--Wybierz płeć--</option>
+							<option value="F">Kobieta</option>
+							<option value="M">Mężczyzna</option>
+						</select>
+					</li>
+					<li>
+						<label class="input-name" for="login">Nazwa użytkownika</label>
+						<input required type="text" id="login" name="login" pattern="[a-z]{3,12}" />
+					</li>
+					<li class="submit-button-container">
+						<button class="regular-action" type="submit" name="submitButton" id="submitButton">
+							Zarejestruj
+						</button>
+					</li>
+				</ul>
+			</form>
+		</main>
+		{{ template "footer.html" }}
+	</body>
 </html>
