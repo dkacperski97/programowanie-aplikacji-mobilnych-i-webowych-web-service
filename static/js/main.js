@@ -68,15 +68,12 @@ async function getValidationMessage(validation, input) {
 }
 
 async function validateInput(validation, input) {
-    console.log('2')
     let message;
     try {
         message = await getValidationMessage(validation, input)
     } catch(e) {
-        console.log(e)
         return;
     }
-    console.log(message)
     removeErrorLabel(input);
     if (message) {
         addErrorLabel(input, message);
