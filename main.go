@@ -137,6 +137,21 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func logoutSender(w http.ResponseWriter, req *http.Request) {
+	session, err := store.Get(req, sessionName)
+	if err != nil {
+		log.Fatal("Failed getting session: ", err)
+	}
+
+	session.Options.MaxAge = -1
+
+	if err = sessions.Save(req, w); err != nil {
+		log.Fatal("Failed deleting session: ", err)
+	}
+
+	http.Redirect(w, req, "/", http.StatusSeeOther)
+}
+
 func verifyUser(login, password string) bool {
 	hash, err := client.HGet(context.Background(), "user:"+login, "passwordHash").Bytes()
 	if err != nil {
@@ -200,6 +215,7 @@ func main() {
 	r.HandleFunc("/sender/register", postRegisterSender).Methods("POST")
 	r.HandleFunc("/sender/login", getLoginSender).Methods("GET")
 	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
+	r.HandleFunc("/sender/logout", logoutSender)
 	http.Handle("/", r)
 
 	port := os.Getenv("PORT")
