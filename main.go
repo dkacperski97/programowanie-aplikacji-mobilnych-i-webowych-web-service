@@ -35,6 +35,22 @@ func signUpSender(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func getLoginSender(w http.ResponseWriter, req *http.Request) {
+	tmp := getTemplates()
+	err := tmp.ExecuteTemplate(w, "loginSender.html", nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func postLoginSender(w http.ResponseWriter, req *http.Request) {
+	tmp := getTemplates()
+	err := tmp.ExecuteTemplate(w, "loginSender.html", nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func main() {
 	err := godotenv.Load()
 	if err != nil {
@@ -46,7 +62,8 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", index)
-	r.HandleFunc("/sender/register", signUpSender)
+	r.HandleFunc("/sender/login", getLoginSender).Methods("GET")
+	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
 	http.Handle("/", r)
 
 	port := os.Getenv("PORT")
