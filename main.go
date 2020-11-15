@@ -40,7 +40,7 @@ func main() {
 
 	r := mux.NewRouter()
 	r.HandleFunc("/", index)
-	r.HandleFunc("/sender/sign-up", signUpSender)
+	r.HandleFunc("/sender/register", signUpSender)
 	http.Handle("/", r)
 
 	port := os.Getenv("PORT")
