@@ -2,7 +2,7 @@
 <html>
 	<head>
 		{{ template "head.html" }}
-		<script src="/static/js/signUpSender.js" defer></script>
+		<script type="module" src="/static/js/signUpSender.js" defer></script>
 		<title>Rejestracja przewoźnika - Szybkie paczki</title>
 	</head>
 	<body>
@@ -37,6 +37,14 @@
 						/>
 					</li>
 					<li>
+						<label class="input-name" for="login">Nazwa użytkownika</label>
+						<input required type="text" id="login" name="login" pattern="[a-z]{3,12}" />
+					</li>
+					<li>
+						<label class="input-name" for="firstname">E-mail</label>
+						<input required type="email" id="email" name="email" />
+					</li>
+					<li>
 						<label class="input-name" for="password">Hasło</label>
 						<input required type="password" id="password" name="password" pattern=".{8,}" />
 					</li>
@@ -45,20 +53,8 @@
 						<input required type="password" id="passwordConfirmation" pattern=".{8,}" />
 					</li>
 					<li>
-						<label class="input-name" for="photo">Zdjęcie</label>
-						<input type="file" accept="image/png, image/jpeg" id="photo" name="photo" />
-					</li>
-					<li>
-						<label class="input-name" for="sex">Płeć</label>
-						<select required name="sex" id="sex">
-							<option value="">--Wybierz płeć--</option>
-							<option value="F">Kobieta</option>
-							<option value="M">Mężczyzna</option>
-						</select>
-					</li>
-					<li>
-						<label class="input-name" for="login">Nazwa użytkownika</label>
-						<input required type="text" id="login" name="login" pattern="[a-z]{3,12}" />
+						<label class="input-name" for="lastname">Adres</label>
+						<input required type="text" id="address" name="address" />
 					</li>
 					<li class="submit-button-container">
 						<button class="regular-action" type="submit" name="submitButton" id="submitButton">

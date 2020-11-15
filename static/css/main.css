@@ -156,6 +156,7 @@ form li {
 }
 form input[type='text'],
 form input[type='password'],
+form input[type='email'],
 form select {
 	display: block;
 	width: 100%;
