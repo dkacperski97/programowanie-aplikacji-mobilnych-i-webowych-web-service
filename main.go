@@ -130,11 +130,7 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal("Failed saving session: ", err)
 	}
 
-	tmp := getTemplates()
-	err = tmp.ExecuteTemplate(w, "index.html", nil)
-	if err != nil {
-		panic(err)
-	}
+	http.Redirect(w, req, "/", http.StatusSeeOther)
 }
 
 func logoutSender(w http.ResponseWriter, req *http.Request) {
@@ -150,6 +146,25 @@ func logoutSender(w http.ResponseWriter, req *http.Request) {
 	}
 
 	http.Redirect(w, req, "/", http.StatusSeeOther)
+}
+
+func showDashboard(w http.ResponseWriter, req *http.Request) {
+	session, err := store.Get(req, sessionName)
+	if err != nil {
+		log.Fatal("Failed getting session: ", err)
+	}
+
+	if session.IsNew {
+		// w.WriteHeader(http.StatusForbidden)
+		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
+		return
+	}
+
+	tmp := getTemplates()
+	err = tmp.ExecuteTemplate(w, "dashboard.html", nil)
+	if err != nil {
+		panic(err)
+	}
 }
 
 func verifyUser(login, password string) bool {
@@ -216,6 +231,7 @@ func main() {
 	r.HandleFunc("/sender/login", getLoginSender).Methods("GET")
 	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
 	r.HandleFunc("/sender/logout", logoutSender)
+	r.HandleFunc("/sender/dashboard", showDashboard)
 	http.Handle("/", r)
 
 	port := os.Getenv("PORT")
