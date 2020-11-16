@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/gob"
+	"encoding/json"
 	"html/template"
 	"log"
 	"net/http"
@@ -167,6 +168,25 @@ func showDashboard(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func checkAvailability(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	login := vars["login"]
+
+	numberOfKeys, err := client.Exists(context.Background(), "user:"+login).Uint64()
+	if err != nil {
+		panic(err)
+	}
+	loginAvailability := "available"
+	if numberOfKeys != 0 {
+		loginAvailability = "taken"
+	}
+	data := map[string]interface{}{
+		login: loginAvailability,
+	}
+	w.Header().Set("Content-Type", "application/json")
+	json.NewEncoder(w).Encode(data)
+}
+
 func verifyUser(login, password string) bool {
 	hash, err := client.HGet(context.Background(), "user:"+login, "passwordHash").Bytes()
 	if err != nil {
@@ -232,6 +252,7 @@ func main() {
 	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
 	r.HandleFunc("/sender/logout", logoutSender)
 	r.HandleFunc("/sender/dashboard", showDashboard)
+	r.HandleFunc("/check/{login}", checkAvailability)
 	http.Handle("/", r)
 
 	port := os.Getenv("PORT")

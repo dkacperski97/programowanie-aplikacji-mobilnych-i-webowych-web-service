@@ -1,3 +1,3 @@
 import attachEvents from "./validationHelper.js";
 
-attachEvents('loginForm');
+attachEvents('loginForm', true);

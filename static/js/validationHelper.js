@@ -17,7 +17,7 @@ const inputsValidations = [
 			'Nazwa użytkownika powinna składać się wyłącznie z małych liter i mieć długość od 3 do 12 znaków.',
 		callback: async (input) => {
 			const inputValue = input.value;
-			const res = await fetch(`https://infinite-hamlet-29399.herokuapp.com/check/${inputValue}`);
+			const res = await fetch(`/check/${inputValue}`);
 			if (input.value !== inputValue) {
 				throw new Error('Value has changed');
 			}
@@ -65,9 +65,9 @@ function removeErrorLabel(control) {
 	}
 }
 
-async function getValidationMessage(validation, control) {
+async function getValidationMessage(validation, control, validateWithoutCallbacks) {
 	if (control.validity.valid) {
-		if (validation.callback) {
+		if (validation.callback && !validateWithoutCallbacks) {
 			return await validation.callback(control);
 		}
 	} else {
@@ -75,11 +75,11 @@ async function getValidationMessage(validation, control) {
 	}
 }
 
-async function validateControl(validation, control) {
+async function validateControl(validation, control, validateWithoutCallbacks) {
 	removeErrorLabel(control);
 	let message;
 	try {
-		message = await getValidationMessage(validation, control);
+		message = await getValidationMessage(validation, control, validateWithoutCallbacks);
 	} catch (e) {
 		return;
 	}
@@ -88,11 +88,11 @@ async function validateControl(validation, control) {
 	}
 }
 
-export default function attachEvents(formName) {
+export default function attachEvents(formName, validateWithoutCallbacks) {
 	inputsValidations.forEach((validation) => {
         const input = document.getElementById(validation.id);
         if (input !== null) {
-            input.addEventListener('input', async (e) => validateControl(validation, e.target));
+            input.addEventListener('input', async (e) => validateControl(validation, e.target, validateWithoutCallbacks));
         }
 	});
 
@@ -103,7 +103,7 @@ export default function attachEvents(formName) {
 		const validations = inputsValidations.map(async (validation) => {
             const control = document.getElementById(validation.id);
             if (control) {
-                await validateControl(validation, control);
+                await validateControl(validation, control, validateWithoutCallbacks);
             }
 		});
 
