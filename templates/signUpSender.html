@@ -9,6 +9,9 @@
 		{{ template "header.html" }}
 		<main class="sign-up">
 			<h2>Rejestracja przewoźnika</h2>
+			{{if .Error}}
+			<p>{{.Error.Error}}</p>
+			{{end}}
 			<form
 				id="signUpForm"
 				method="POST"

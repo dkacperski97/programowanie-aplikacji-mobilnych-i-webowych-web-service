@@ -3,7 +3,6 @@ package auth
 import (
 	"context"
 	"errors"
-	"log"
 	"regexp"
 
 	"github.com/go-redis/redis/v8"
@@ -19,23 +18,26 @@ type User struct {
 	Address      string
 }
 
-func CreateUser(login, password, passwordConfirmation, email, firstname, lastname, address string) (*User, error) {
-	isValid := IsValid(login, password, passwordConfirmation, email, firstname, lastname, address)
-	if isValid == false {
-		return nil, errors.New("User is not valid")
+func CreateUser(login, password, passwordConfirmation, email, firstname, lastname, address string) (*User, error, error) {
+	validationErr, err := IsValid(login, password, passwordConfirmation, email, firstname, lastname, address)
+	if validationErr != nil {
+		return nil, err, nil
+	}
+	if err != nil {
+		return nil, nil, err
 	}
 	u := new(User)
 	u.Login = login
 	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	u.PasswordHash = passwordHash
 	u.Email = email
 	u.Firstname = firstname
 	u.Lastname = lastname
 	u.Address = address
-	return u, nil
+	return u, nil, nil
 }
 
 func Verify(client *redis.Client, login, password string) bool {
@@ -47,52 +49,52 @@ func Verify(client *redis.Client, login, password string) bool {
 	return err == nil
 }
 
-func IsValid(login, password, passwordConfirmation, email, firstname, lastname, address string) bool {
+func IsValid(login, password, passwordConfirmation, email, firstname, lastname, address string) (error, error) {
 	matched, err := regexp.MatchString(`[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+`, firstname)
 	if err != nil {
-		log.Panic("Incorrect regex pattern:", err)
+		return nil, err
 	}
 	if !matched {
-		return false
+		return errors.New("Niepoprawne imię"), nil
 	}
 
 	matched, err = regexp.MatchString(`[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+`, lastname)
 	if err != nil {
-		log.Panic("Incorrect regex pattern:", err)
+		return nil, err
 	}
 	if !matched {
-		return false
+		return errors.New("Niepoprawne nazwisko"), nil
 	}
 
 	matched, err = regexp.MatchString(`[a-z]{3,12}`, login)
 	if err != nil {
-		log.Panic("Incorrect regex pattern:", err)
+		return nil, err
 	}
 	if !matched {
-		return false
+		return errors.New("Niepoprawny login"), nil
 	}
 
 	matched, err = regexp.MatchString(`[a-z]{3,12}`, password)
 	if err != nil {
-		log.Panic("Incorrect regex pattern:", err)
+		return nil, err
 	}
 	if !matched || password != passwordConfirmation {
-		return false
+		return errors.New("Niepoprawne hasło"), nil
 	}
 
 	matched, err = regexp.MatchString("^[a-zA-Z0-9.!#$%&'*+\\/=?^_`{|}~-]+@[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(?:\\.[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$", email)
 	if err != nil {
-		log.Panic("Incorrect regex pattern:", err)
+		return nil, err
 	}
 	if !matched {
-		return false
+		return errors.New("Niepoprawny email"), nil
 	}
 
 	if len(address) == 0 && len(address) > 200 {
-		return false
+		return errors.New("Niepoprawny adres"), nil
 	}
 
-	return true
+	return nil, nil
 }
 
 func (user *User) Save(client *redis.Client) {

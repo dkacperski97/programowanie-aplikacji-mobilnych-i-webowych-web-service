@@ -40,9 +40,15 @@ func index(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+type registerSenderPageData struct {
+	Error error
+}
+
 func getRegisterSender(w http.ResponseWriter, req *http.Request) {
 	tmp := getTemplates()
-	err := tmp.ExecuteTemplate(w, "signUpSender.html", nil)
+	err := tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
+		Error: nil,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -54,7 +60,7 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	user, err := auth.CreateUser(
+	user, validationErr, err := auth.CreateUser(
 		req.Form.Get("login"),
 		req.Form.Get("password"),
 		req.Form.Get("passwordConfirmation"),
@@ -63,17 +69,22 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		req.Form.Get("lastname"),
 		req.Form.Get("address"),
 	)
-	if err == nil {
-		user.Save(client)
-		http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
-		return
-	}
-
-	tmp := getTemplates()
-	err = tmp.ExecuteTemplate(w, "signUpSender.html", nil)
 	if err != nil {
 		panic(err)
 	}
+	if validationErr != nil {
+		tmp := getTemplates()
+		err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
+			Error: err,
+		})
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+
+	user.Save(client)
+	http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
 }
 
 func getLoginSender(w http.ResponseWriter, req *http.Request) {
