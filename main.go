@@ -10,12 +10,12 @@ import (
 	"os"
 	"time"
 
+	"example.com/project/auth"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
 	"github.com/rbcervilla/redisstore/v8"
-	"golang.org/x/crypto/bcrypt"
 )
 
 var (
@@ -23,30 +23,6 @@ var (
 	store       *redisstore.RedisStore
 	sessionName string
 )
-
-type User struct {
-	Login        string
-	PasswordHash []byte
-	Email        string
-	Firstname    string
-	Lastname     string
-	Address      string
-}
-
-func getUser(login, password, email, firstname, lastname, address string) *User {
-	u := new(User)
-	u.Login = login
-	passwordHash, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		panic(err)
-	}
-	u.PasswordHash = passwordHash
-	u.Email = email
-	u.Firstname = firstname
-	u.Lastname = lastname
-	u.Address = address
-	return u
-}
 
 func getTemplates() *template.Template {
 	tmp := template.New("_func").Funcs(template.FuncMap{
@@ -78,15 +54,20 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	user := getUser(
+	user, err := auth.CreateUser(
 		req.Form.Get("login"),
 		req.Form.Get("password"),
+		req.Form.Get("passwordConfirmation"),
 		req.Form.Get("email"),
 		req.Form.Get("firstname"),
 		req.Form.Get("lastname"),
 		req.Form.Get("address"),
 	)
-	saveUser(user)
+	if err == nil {
+		user.Save(client)
+		http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
+		return
+	}
 
 	tmp := getTemplates()
 	err = tmp.ExecuteTemplate(w, "signUpSender.html", nil)
@@ -109,7 +90,7 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	isValid := verifyUser(req.Form.Get("login"), req.Form.Get("password"))
+	isValid := auth.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
 
 	if !isValid {
 		tmp := getTemplates()
@@ -185,25 +166,6 @@ func checkAvailability(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
-}
-
-func verifyUser(login, password string) bool {
-	hash, err := client.HGet(context.Background(), "user:"+login, "passwordHash").Bytes()
-	if err != nil {
-		return false
-	}
-	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
-	return err == nil
-}
-
-func saveUser(user *User) {
-	client.HSet(context.Background(), "user:"+user.Login, map[string]interface{}{
-		"passwordHash": user.PasswordHash,
-		"email":        user.Email,
-		"firstname":    user.Firstname,
-		"lastname":     user.Lastname,
-		"address":      user.Address,
-	})
 }
 
 func getRedisClient() *redis.Client {
