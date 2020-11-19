@@ -25,16 +25,27 @@ var (
 	sessionName string
 )
 
-func getTemplates() *template.Template {
+func getTemplates(req *http.Request) *template.Template {
+	session, err := store.Get(req, sessionName)
+	if err != nil {
+		log.Fatal("Failed getting session: ", err)
+	}
+
 	tmp := template.New("_func").Funcs(template.FuncMap{
 		"getDate": time.Now,
+		"getSession": func() *sessions.Session {
+			if session.IsNew {
+				return nil
+			}
+			return session
+		},
 	})
 	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
 	return tmp
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates()
+	tmp := getTemplates(req)
 	err := tmp.ExecuteTemplate(w, "index.html", nil)
 	if err != nil {
 		panic(err)
@@ -46,7 +57,7 @@ type registerSenderPageData struct {
 }
 
 func getRegisterSender(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates()
+	tmp := getTemplates(req)
 	err := tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
 		Error: nil,
 	})
@@ -73,7 +84,7 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		panic(err)
 	}
 	if validationErr != nil {
-		tmp := getTemplates()
+		tmp := getTemplates(req)
 		err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
 			Error: validationErr,
 		})
@@ -91,7 +102,7 @@ type loginSenderPageData struct {
 }
 
 func getLoginSender(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates()
+	tmp := getTemplates(req)
 	err := tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
 		Error: nil,
 	})
@@ -109,7 +120,7 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 	isValid := auth.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
 
 	if !isValid {
-		tmp := getTemplates()
+		tmp := getTemplates(req)
 		err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
 			Error: errors.New("Niepoprawne dane logowania"),
 		})
@@ -160,7 +171,7 @@ func showDashboard(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	tmp := getTemplates()
+	tmp := getTemplates(req)
 	err = tmp.ExecuteTemplate(w, "dashboard.html", nil)
 	if err != nil {
 		panic(err)

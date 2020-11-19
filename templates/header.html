@@ -4,10 +4,13 @@
 	<nav>
 		<ul>
 			<li><a href="/">Strona główna</a></li>
+			{{ if getSession }}
 			<li><a href="/sender/dashboard">Etykiety paczek</a></li>
+			<li><a href="/sender/logout">Wyloguj</a></li>
+			{{ else }}
 			<li><a href="/sender/register">Rejestracja nadawcy</a></li>
 			<li><a href="/sender/login">Logowanie nadawcy</a></li>
-			<li><a href="/sender/logout">Wyloguj</a></li>
+			{{ end }}
 		</ul>
 	</nav>
 </header>
