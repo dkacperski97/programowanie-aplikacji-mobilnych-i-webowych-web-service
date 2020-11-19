@@ -1,3 +1,4 @@
 import attachEvents from "./validationHelper.js";
+import userValidations from "./userValidations.js";
 
-attachEvents('loginForm', true);
+attachEvents(userValidations, 'loginForm', true);
