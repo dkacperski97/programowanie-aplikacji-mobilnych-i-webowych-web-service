@@ -9,8 +9,8 @@
 	--color-third-brighter: #fff;
 	--color-third-contrast: #333;
 	--color-fourth: #f00;
-	--color-fourth-brighter: #f44;
-	--color-fourth-contrast: #fff;
+	--color-fourth-brighter: #ffe5e5;
+	--color-fourth-contrast: #f00;
 }
 html,
 body,
@@ -218,4 +218,11 @@ label.error-message {
 }
 main.login {
 	max-width: calc(500px + 1rem);
+}
+.alert {
+	margin: 0.5rem;
+	background: var(--color-fourth-brighter);
+	padding: calc(0.6rem - 1px);
+	line-height: 1rem;
+	color: var(--color-fourth-contrast);
 }
