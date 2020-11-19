@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/gob"
 	"encoding/json"
+	"errors"
 	"html/template"
 	"log"
 	"net/http"
@@ -85,9 +86,15 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
 }
 
+type loginSenderPageData struct {
+	Error error
+}
+
 func getLoginSender(w http.ResponseWriter, req *http.Request) {
 	tmp := getTemplates()
-	err := tmp.ExecuteTemplate(w, "loginSender.html", nil)
+	err := tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
+		Error: nil,
+	})
 	if err != nil {
 		panic(err)
 	}
@@ -103,7 +110,9 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 
 	if !isValid {
 		tmp := getTemplates()
-		err = tmp.ExecuteTemplate(w, "loginSender.html", nil)
+		err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
+			Error: errors.New("Niepoprawne dane logowania"),
+		})
 		if err != nil {
 			panic(err)
 		}

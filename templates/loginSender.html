@@ -9,6 +9,9 @@
 		{{ template "header.html" }}
 		<main class="login">
 			<h2>Logowanie przewoźnika</h2>
+			{{if .Error}}
+			<p class="alert">{{.Error.Error}}</p>
+			{{end}}
 			<form
 				id="loginForm"
 				method="POST"
