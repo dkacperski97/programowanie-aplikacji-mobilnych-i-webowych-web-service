@@ -18,10 +18,10 @@ type User struct {
 	Address      string
 }
 
-func CreateUser(login, password, passwordConfirmation, email, firstname, lastname, address string) (*User, error, error) {
-	validationErr, err := IsValid(login, password, passwordConfirmation, email, firstname, lastname, address)
+func CreateUser(login, password, email, firstname, lastname, address string) (*User, error, error) {
+	validationErr, err := IsValid(login, password, email, firstname, lastname, address)
 	if validationErr != nil {
-		return nil, err, nil
+		return nil, validationErr, nil
 	}
 	if err != nil {
 		return nil, nil, err
@@ -49,7 +49,7 @@ func Verify(client *redis.Client, login, password string) bool {
 	return err == nil
 }
 
-func IsValid(login, password, passwordConfirmation, email, firstname, lastname, address string) (error, error) {
+func IsValid(login, password, email, firstname, lastname, address string) (error, error) {
 	matched, err := regexp.MatchString(`[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+`, firstname)
 	if err != nil {
 		return nil, err
@@ -74,11 +74,11 @@ func IsValid(login, password, passwordConfirmation, email, firstname, lastname, 
 		return errors.New("Niepoprawny login"), nil
 	}
 
-	matched, err = regexp.MatchString(`[a-z]{3,12}`, password)
+	matched, err = regexp.MatchString(`.{8,}`, password)
 	if err != nil {
 		return nil, err
 	}
-	if !matched || password != passwordConfirmation {
+	if !matched {
 		return errors.New("Niepoprawne hasło"), nil
 	}
 

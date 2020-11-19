@@ -35,6 +35,15 @@ const inputsValidations = [
 	{
 		id: 'password',
 		message: 'Hasło powinno składać się z przynajmniej 8 znaków.',
+		callback: () => {
+			const passwordConfirmationId = 'passwordConfirmation';
+			const passwordConfirmation = document.getElementById(passwordConfirmationId);
+			const validation = inputsValidations.find(validation => validation.id === passwordConfirmationId);
+			if (passwordConfirmation?.value.length > 0 && validation) {
+				validateControl(validation, passwordConfirmation, false);
+				return null
+			}
+		}
 	},
 	{
 		id: 'passwordConfirmation',

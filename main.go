@@ -63,7 +63,6 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 	user, validationErr, err := auth.CreateUser(
 		req.Form.Get("login"),
 		req.Form.Get("password"),
-		req.Form.Get("passwordConfirmation"),
 		req.Form.Get("email"),
 		req.Form.Get("firstname"),
 		req.Form.Get("lastname"),
@@ -75,14 +74,13 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 	if validationErr != nil {
 		tmp := getTemplates()
 		err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
-			Error: err,
+			Error: validationErr,
 		})
 		if err != nil {
 			panic(err)
 		}
 		return
 	}
-
 	user.Save(client)
 	http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
 }
