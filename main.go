@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"example.com/project/auth"
+	"example.com/project/handlers"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -160,19 +161,8 @@ func logoutSender(w http.ResponseWriter, req *http.Request) {
 }
 
 func showDashboard(w http.ResponseWriter, req *http.Request) {
-	session, err := store.Get(req, sessionName)
-	if err != nil {
-		log.Fatal("Failed getting session: ", err)
-	}
-
-	if session.IsNew {
-		// w.WriteHeader(http.StatusForbidden)
-		http.Error(w, http.StatusText(http.StatusForbidden), http.StatusForbidden)
-		return
-	}
-
 	tmp := getTemplates(req)
-	err = tmp.ExecuteTemplate(w, "dashboard.html", nil)
+	err := tmp.ExecuteTemplate(w, "dashboard.html", nil)
 	if err != nil {
 		panic(err)
 	}
@@ -242,6 +232,7 @@ func main() {
 	r.HandleFunc("/sender/login", getLoginSender).Methods("GET")
 	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
 	r.HandleFunc("/sender/logout", logoutSender)
+	r.Handle("/sender/dashboard", handlers.SessionHandler(store, sessionName, http.HandlerFunc(showDashboard)))
 	r.HandleFunc("/sender/dashboard", showDashboard)
 	r.HandleFunc("/check/{login}", checkAvailability)
 	http.Handle("/", r)
