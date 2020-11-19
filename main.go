@@ -168,6 +168,22 @@ func showDashboard(w http.ResponseWriter, req *http.Request) {
 	}
 }
 
+func getCreateLabel(w http.ResponseWriter, req *http.Request) {
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "createLabel.html", nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
+func postCreateLabel(w http.ResponseWriter, req *http.Request) {
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "createLabel.html", nil)
+	if err != nil {
+		panic(err)
+	}
+}
+
 func checkAvailability(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	login := vars["login"]
@@ -233,7 +249,8 @@ func main() {
 	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
 	r.HandleFunc("/sender/logout", logoutSender)
 	r.Handle("/sender/dashboard", handlers.SessionHandler(store, sessionName, http.HandlerFunc(showDashboard)))
-	r.HandleFunc("/sender/dashboard", showDashboard)
+	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(getCreateLabel))).Methods("GET")
+	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(postCreateLabel))).Methods("POST")
 	r.HandleFunc("/check/{login}", checkAvailability)
 	http.Handle("/", r)
 

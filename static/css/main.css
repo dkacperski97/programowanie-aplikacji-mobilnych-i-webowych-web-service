@@ -139,7 +139,8 @@ main {
 }
 
 .sign-up h2,
-.login h2 {
+.login h2,
+.create-label h2 {
 	padding: 0.5rem;
 	margin: 0;
 }
@@ -157,6 +158,7 @@ form li {
 form input[type='text'],
 form input[type='password'],
 form input[type='email'],
+form input[type='number'],
 form select {
 	display: block;
 	width: 100%;
@@ -225,4 +227,7 @@ main.login {
 	padding: calc(0.6rem - 1px);
 	line-height: 1rem;
 	color: var(--color-fourth-contrast);
+}
+sup {
+	line-height: 0;
 }
