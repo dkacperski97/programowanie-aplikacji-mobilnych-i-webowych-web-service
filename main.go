@@ -327,9 +327,10 @@ func getRedisClient() *redis.Client {
 	if redisHost == "" {
 		redisHost = "localhost"
 	}
+	redisPass := os.Getenv("REDIS_PASS")
 	return redis.NewClient(&redis.Options{
 		Addr:     redisHost + ":" + redisPort,
-		Password: "",
+		Password: redisPass,
 		DB:       0,
 	})
 }
