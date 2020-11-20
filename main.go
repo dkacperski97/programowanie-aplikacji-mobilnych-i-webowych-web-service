@@ -237,6 +237,30 @@ func postCreateLabel(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/sender/dashboard", http.StatusSeeOther)
 }
 
+func removeLabel(w http.ResponseWriter, req *http.Request) {
+	vars := mux.Vars(req)
+	labelID := vars["labelId"]
+
+	session, err := store.Get(req, sessionName)
+	if err != nil {
+		log.Fatal("Failed getting session: ", err)
+	}
+	sender, exists := session.Values["user"]
+	if exists == false {
+		log.Fatal("Failed getting session value")
+	}
+
+	err = models.RemoveLabel(
+		client,
+		sender.(string),
+		labelID,
+	)
+	if err != nil {
+		panic(err)
+	}
+	http.Redirect(w, req, "/sender/dashboard", http.StatusSeeOther)
+}
+
 func checkAvailability(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	login := vars["login"]
@@ -304,6 +328,7 @@ func main() {
 	r.Handle("/sender/dashboard", handlers.SessionHandler(store, sessionName, http.HandlerFunc(showDashboard)))
 	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(getCreateLabel))).Methods("GET")
 	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(postCreateLabel))).Methods("POST")
+	r.Handle("/sender/labels/{labelId}/remove", handlers.SessionHandler(store, sessionName, http.HandlerFunc(removeLabel))).Methods("POST")
 	r.HandleFunc("/check/{login}", checkAvailability)
 	http.Handle("/", r)
 

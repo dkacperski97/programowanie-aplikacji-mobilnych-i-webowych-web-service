@@ -7,13 +7,38 @@
 	<body>
 		{{ template "header.html" }}
 		<main class="dashboard">
-            <h2>Etykiety paczek</h2>
+			<h2>Etykiety paczek</h2>
 			<a class="regular-action" href="./labels/create">Generowanie etykiety</a>
-            <ul>
+			<ul class="labels-list">
 				{{ range .Labels }}
-				<li>{{ .Recipient }} | {{ .Locker }} | {{ .Size }}</li>
+				<li>
+					<h3>Etykieta</h3>
+					<ul class="label-details">
+						<li>
+							<h4>Adresat</h4>
+							<p>{{ .Recipient }}</p>
+						</li>
+						<li>
+							<h4>Identyfikator skrytki</h4>
+							<p>{{ .Locker }}</p>
+						</li>
+						<li>
+							<h4>Rozmiar</h4>
+							<p>{{ .Size }}</p>
+						</li>
+						<li>
+							<form
+								class="removeLabelForm"
+								method="POST"
+								action="/sender/labels/{{ .ID }}/remove"
+							>
+								<button type="submit" class="regular-action">Usuń</button>
+							</form>
+						</li>
+					</ul>
+				</li>
 				{{ end }}
-            </ul>
+			</ul>
 		</main>
 		{{ template "footer.html" }}
 	</body>

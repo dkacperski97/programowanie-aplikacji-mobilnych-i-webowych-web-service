@@ -11,6 +11,7 @@ import (
 )
 
 type Label struct {
+	ID        string
 	Sender    string
 	Recipient string
 	Locker    string
@@ -95,8 +96,17 @@ func GetLabelsBySender(client *redis.Client, sender string) ([]Label, error) {
 		if err != nil {
 			return nil, err
 		}
-		label := Label{val["sender"], val["recipient"], val["locker"], size}
+		label := Label{id, val["sender"], val["recipient"], val["locker"], size}
 		labels = append(labels, label)
 	}
 	return labels, nil
+}
+
+func RemoveLabel(client *redis.Client, sender, labelID string) error {
+	err := client.Del(context.Background(), "label:"+labelID).Err()
+	if err != nil {
+		return err
+	}
+	err = client.SRem(context.Background(), "user:"+sender+":labels", labelID).Err()
+	return err
 }
