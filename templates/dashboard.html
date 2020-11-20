@@ -10,9 +10,9 @@
             <h2>Etykiety paczek</h2>
 			<a class="regular-action" href="./labels/create">Generowanie etykiety</a>
             <ul>
-                <li>Etykieta 1</li>
-                <li>Etykieta 2</li>
-                <li>Etykieta 3</li>
+				{{ range .Labels }}
+				<li>{{ .Recipient }} | {{ .Locker }} | {{ .Size }}</li>
+				{{ end }}
             </ul>
 		</main>
 		{{ template "footer.html" }}

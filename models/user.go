@@ -1,4 +1,4 @@
-package auth
+package models
 
 import (
 	"context"
@@ -19,7 +19,7 @@ type User struct {
 }
 
 func CreateUser(login, password, email, firstname, lastname, address string) (*User, error, error) {
-	validationErr, err := IsValid(login, password, email, firstname, lastname, address)
+	validationErr, err := IsUserValid(login, password, email, firstname, lastname, address)
 	if validationErr != nil {
 		return nil, validationErr, nil
 	}
@@ -49,7 +49,7 @@ func Verify(client *redis.Client, login, password string) bool {
 	return err == nil
 }
 
-func IsValid(login, password, email, firstname, lastname, address string) (error, error) {
+func IsUserValid(login, password, email, firstname, lastname, address string) (error, error) {
 	matched, err := regexp.MatchString(`[A-ZĄĆĘŁŃÓŚŹŻ][a-ząćęłńóśźż]+`, firstname)
 	if err != nil {
 		return nil, err
@@ -97,12 +97,13 @@ func IsValid(login, password, email, firstname, lastname, address string) (error
 	return nil, nil
 }
 
-func (user *User) Save(client *redis.Client) {
-	client.HSet(context.Background(), "user:"+user.Login, map[string]interface{}{
+func (user *User) Save(client *redis.Client) error {
+	err := client.HSet(context.Background(), "user:"+user.Login, map[string]interface{}{
 		"passwordHash": user.PasswordHash,
 		"email":        user.Email,
 		"firstname":    user.Firstname,
 		"lastname":     user.Lastname,
 		"address":      user.Address,
-	})
+	}).Err()
+	return err
 }

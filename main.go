@@ -11,8 +11,8 @@ import (
 	"os"
 	"time"
 
-	"example.com/project/auth"
 	"example.com/project/handlers"
+	"example.com/project/models"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
 	"github.com/gorilla/sessions"
@@ -73,7 +73,7 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	user, validationErr, err := auth.CreateUser(
+	user, validationErr, err := models.CreateUser(
 		req.Form.Get("login"),
 		req.Form.Get("password"),
 		req.Form.Get("email"),
@@ -118,7 +118,7 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal(err)
 	}
 
-	isValid := auth.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
+	isValid := models.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
 
 	if !isValid {
 		tmp := getTemplates(req)
@@ -136,6 +136,7 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 		log.Fatal("Failed getting session: ", err)
 	}
 
+	session.Values["user"] = req.Form.Get("login")
 	session.Values["loginTime"] = time.Now()
 
 	if err = sessions.Save(req, w); err != nil {
@@ -160,28 +161,80 @@ func logoutSender(w http.ResponseWriter, req *http.Request) {
 	http.Redirect(w, req, "/", http.StatusSeeOther)
 }
 
+type showDashboardPageData struct {
+	Labels []models.Label
+}
+
 func showDashboard(w http.ResponseWriter, req *http.Request) {
+	session, err := store.Get(req, sessionName)
+	if err != nil {
+		log.Fatal("Failed getting session: ", err)
+	}
+	sender, exists := session.Values["user"]
+	if exists == false {
+		log.Fatal("Failed getting session value")
+	}
+	labels, err := models.GetLabelsBySender(client, sender.(string))
+	if err != nil {
+		log.Fatal("Failed getting labels: ", err)
+	}
 	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "dashboard.html", nil)
+	err = tmp.ExecuteTemplate(w, "dashboard.html", &showDashboardPageData{
+		Labels: labels,
+	})
 	if err != nil {
 		panic(err)
 	}
 }
 
+type createLabelPageData struct {
+	Error error
+}
+
 func getCreateLabel(w http.ResponseWriter, req *http.Request) {
 	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "createLabel.html", nil)
+	err := tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
+		Error: nil,
+	})
 	if err != nil {
 		panic(err)
 	}
 }
 
 func postCreateLabel(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "createLabel.html", nil)
+	err := req.ParseForm()
+	if err != nil {
+		log.Fatal(err)
+	}
+	session, err := store.Get(req, sessionName)
+	if err != nil {
+		log.Fatal("Failed getting session: ", err)
+	}
+	sender, exists := session.Values["user"]
+	if exists == false {
+		log.Fatal("Failed getting session value")
+	}
+	label, validationErr, err := models.CreateLabel(
+		sender.(string),
+		req.Form.Get("recipient"),
+		req.Form.Get("locker"),
+		req.Form.Get("size"),
+	)
 	if err != nil {
 		panic(err)
 	}
+	if validationErr != nil {
+		tmp := getTemplates(req)
+		err = tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
+			Error: validationErr,
+		})
+		if err != nil {
+			panic(err)
+		}
+		return
+	}
+	label.Save(client)
+	http.Redirect(w, req, "/sender/dashboard", http.StatusSeeOther)
 }
 
 func checkAvailability(w http.ResponseWriter, req *http.Request) {
