@@ -9,8 +9,9 @@
 	--color-third-brighter: #fff;
 	--color-third-contrast: #333;
 	--color-fourth: #f00;
-	--color-fourth-brighter: #ffe5e5;
-	--color-fourth-contrast: #f00;
+	--color-fourth-brighter: #ff6e6e;
+	--color-fourth-light: #ffe5e5;
+	--color-fourth-contrast: #fff;
 }
 html,
 body,
@@ -138,9 +139,7 @@ main {
 	height: 100%;
 }
 
-.sign-up h2,
-.login h2,
-.create-label h2 {
+main h2 {
 	padding: 0.5rem;
 	margin: 0;
 }
@@ -223,11 +222,52 @@ main.login {
 }
 .alert {
 	margin: 0.5rem;
-	background: var(--color-fourth-brighter);
+	background: var(--color-fourth-light);
 	padding: calc(0.6rem - 1px);
 	line-height: 1rem;
-	color: var(--color-fourth-contrast);
+	color: var(--color-fourth);
 }
 sup {
 	line-height: 0;
+}
+.dashboard {
+	display: flex;
+	flex-wrap: wrap;
+	justify-content: space-between;
+	align-items: center;
+}
+.dashboard > a {
+	margin: 0.5rem;
+}
+.labels-list {
+	width: 100%;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+.labels-list h3 {
+	margin-top: 2rem;
+	margin-bottom: 1rem;
+	padding: 0 0.5rem;
+}
+.label-details {
+	display: flex;
+	list-style: none;
+	margin: 0;
+	padding: 0;
+	justify-content: space-between;
+	flex-wrap: wrap;
+}
+.label-details > li {
+	padding: 0 0.5rem;
+}
+.label-details h4 {
+	margin: 0;
+}
+.label-details form .regular-action {
+	background-color: var(--color-fourth);
+	color: var(--color-fourth-contrast);
+}
+.label-details form .regular-action:hover {
+	background-color: var(--color-fourth-brighter);
 }
