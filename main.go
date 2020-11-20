@@ -347,6 +347,18 @@ func main() {
 	if err != nil {
 		log.Print("Failed to create redis store: ", err)
 	}
+	var secureCookie bool
+	if os.Getenv("SECURE_COOKIE") == "" || os.Getenv("SECURE_COOKIE") == "FALSE" {
+		secureCookie = false
+	} else {
+		secureCookie = true
+	}
+	store.Options(sessions.Options{
+		Secure:   secureCookie,
+		HttpOnly: true,
+		Path:     "/",
+		MaxAge:   60 * 60 * 24,
+	})
 	sessionName = os.Getenv("SESSION_NAME")
 	if sessionName == "" {
 		sessionName = "session"
