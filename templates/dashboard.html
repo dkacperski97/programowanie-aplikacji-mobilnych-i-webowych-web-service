@@ -9,6 +9,7 @@
 		<main class="dashboard">
 			<h2>Etykiety paczek</h2>
 			<a class="regular-action" href="./labels/create">Generowanie etykiety</a>
+			{{ if .Labels }}
 			<ul class="labels-list">
 				{{ range .Labels }}
 				<li>
@@ -39,6 +40,9 @@
 				</li>
 				{{ end }}
 			</ul>
+			{{ else }}
+			<p class="labels-info">Nie utworzyłeś jeszcze żadnych etykiet.</p>
+			{{ end }}
 		</main>
 		{{ template "footer.html" }}
 	</body>

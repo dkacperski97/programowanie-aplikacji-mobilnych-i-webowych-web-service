@@ -243,6 +243,10 @@ sup {
 .dashboard > a {
 	margin: 0.5rem;
 }
+.labels-info {
+	width: 100%;
+	padding: 0 0.5rem;
+}
 .labels-list {
 	width: 100%;
 	list-style: none;
