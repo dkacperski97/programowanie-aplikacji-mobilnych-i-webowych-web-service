@@ -336,8 +336,8 @@ func getRedisClient() *redis.Client {
 
 func main() {
 	err := godotenv.Load()
-	if err != nil {
-		log.Print("Error loading .env file")
+	if err == nil {
+		log.Print(".env file loaded")
 	}
 
 	client = getRedisClient()
