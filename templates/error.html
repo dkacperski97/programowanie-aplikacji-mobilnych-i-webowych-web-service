@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		{{ template "head.html" }}
+		<title>Wystąpił błąd - Szybkie paczki</title>
+	</head>
+	<body>
+		{{ template "header.html" }}
+		<main class="error">
+			<img src="/static/img/undraw_warning_cyit.svg" alt="Warning" />
+			<section>
+				<h2>Wystąpił błąd</h2>
+				<p>
+                    {{ .StatusCode }}: {{ .StatusText }}
+				</p>
+			</section>
+		</main>
+		{{ template "footer.html" }}
+	</body>
+</html>

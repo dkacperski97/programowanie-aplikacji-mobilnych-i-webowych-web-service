@@ -26,10 +26,10 @@ var (
 	sessionName string
 )
 
-func getTemplates(req *http.Request) *template.Template {
+func getTemplates(req *http.Request) (*template.Template, error) {
 	session, err := store.Get(req, sessionName)
 	if err != nil {
-		log.Fatal("Failed getting session: ", err)
+		return nil, err
 	}
 
 	tmp := template.New("_func").Funcs(template.FuncMap{
@@ -42,14 +42,18 @@ func getTemplates(req *http.Request) *template.Template {
 		},
 	})
 	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
-	return tmp
+	return tmp, nil
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "index.html", nil)
+	tmp, err := getTemplates(req)
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
+	}
+	err = tmp.ExecuteTemplate(w, "index.html", nil)
+	if err != nil {
+		handleError(w, req, http.StatusInternalServerError)
 	}
 }
 
@@ -58,19 +62,24 @@ type registerSenderPageData struct {
 }
 
 func getRegisterSender(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
+	tmp, err := getTemplates(req)
+	if err != nil {
+		handleError(w, req, http.StatusInternalServerError)
+		return
+	}
+	err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
 		Error: nil,
 	})
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
 	}
 }
 
 func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
-		log.Fatal(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	user, validationErr, err := models.CreateUser(
@@ -82,15 +91,20 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		req.Form.Get("address"),
 	)
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	if validationErr != nil {
-		tmp := getTemplates(req)
+		tmp, err := getTemplates(req)
+		if err != nil {
+			handleError(w, req, http.StatusInternalServerError)
+			return
+		}
 		err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
 			Error: validationErr,
 		})
 		if err != nil {
-			panic(err)
+			handleError(w, req, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -103,44 +117,55 @@ type loginSenderPageData struct {
 }
 
 func getLoginSender(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
+	tmp, err := getTemplates(req)
+	if err != nil {
+		handleError(w, req, http.StatusInternalServerError)
+		return
+	}
+	err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
 		Error: nil,
 	})
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
 	}
 }
 
 func postLoginSender(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
-		log.Fatal(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	isValid := models.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
 
 	if !isValid {
-		tmp := getTemplates(req)
+		tmp, err := getTemplates(req)
+		if err != nil {
+			handleError(w, req, http.StatusInternalServerError)
+			return
+		}
 		err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
 			Error: errors.New("Niepoprawne dane logowania"),
 		})
 		if err != nil {
-			panic(err)
+			handleError(w, req, http.StatusInternalServerError)
 		}
 		return
 	}
 
 	session, err := store.Get(req, sessionName)
 	if err != nil {
-		log.Fatal("Failed getting session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	session.Values["user"] = req.Form.Get("login")
 	session.Values["loginTime"] = time.Now()
 
 	if err = sessions.Save(req, w); err != nil {
-		log.Fatal("Failed saving session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	http.Redirect(w, req, "/", http.StatusSeeOther)
@@ -149,13 +174,15 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 func logoutSender(w http.ResponseWriter, req *http.Request) {
 	session, err := store.Get(req, sessionName)
 	if err != nil {
-		log.Fatal("Failed getting session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	session.Options.MaxAge = -1
 
 	if err = sessions.Save(req, w); err != nil {
-		log.Fatal("Failed deleting session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	http.Redirect(w, req, "/", http.StatusSeeOther)
@@ -168,22 +195,29 @@ type showDashboardPageData struct {
 func showDashboard(w http.ResponseWriter, req *http.Request) {
 	session, err := store.Get(req, sessionName)
 	if err != nil {
-		log.Fatal("Failed getting session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	sender, exists := session.Values["user"]
 	if exists == false {
-		log.Fatal("Failed getting session value")
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	labels, err := models.GetLabelsBySender(client, sender.(string))
 	if err != nil {
-		log.Fatal("Failed getting labels: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
-	tmp := getTemplates(req)
+	tmp, err := getTemplates(req)
+	if err != nil {
+		handleError(w, req, http.StatusInternalServerError)
+		return
+	}
 	err = tmp.ExecuteTemplate(w, "dashboard.html", &showDashboardPageData{
 		Labels: labels,
 	})
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
 	}
 }
 
@@ -192,27 +226,35 @@ type createLabelPageData struct {
 }
 
 func getCreateLabel(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
+	tmp, err := getTemplates(req)
+	if err != nil {
+		handleError(w, req, http.StatusInternalServerError)
+		return
+	}
+	err = tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
 		Error: nil,
 	})
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 }
 
 func postCreateLabel(w http.ResponseWriter, req *http.Request) {
 	err := req.ParseForm()
 	if err != nil {
-		log.Fatal(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	session, err := store.Get(req, sessionName)
 	if err != nil {
-		log.Fatal("Failed getting session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	sender, exists := session.Values["user"]
 	if exists == false {
-		log.Fatal("Failed getting session value")
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	label, validationErr, err := models.CreateLabel(
 		sender.(string),
@@ -221,15 +263,20 @@ func postCreateLabel(w http.ResponseWriter, req *http.Request) {
 		req.Form.Get("size"),
 	)
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	if validationErr != nil {
-		tmp := getTemplates(req)
+		tmp, err := getTemplates(req)
+		if err != nil {
+			handleError(w, req, http.StatusInternalServerError)
+			return
+		}
 		err = tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
 			Error: validationErr,
 		})
 		if err != nil {
-			panic(err)
+			handleError(w, req, http.StatusInternalServerError)
 		}
 		return
 	}
@@ -243,11 +290,13 @@ func removeLabel(w http.ResponseWriter, req *http.Request) {
 
 	session, err := store.Get(req, sessionName)
 	if err != nil {
-		log.Fatal("Failed getting session: ", err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	sender, exists := session.Values["user"]
 	if exists == false {
-		log.Fatal("Failed getting session value")
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 
 	err = models.RemoveLabel(
@@ -256,7 +305,8 @@ func removeLabel(w http.ResponseWriter, req *http.Request) {
 		labelID,
 	)
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	http.Redirect(w, req, "/sender/dashboard", http.StatusSeeOther)
 }
@@ -267,7 +317,8 @@ func checkAvailability(w http.ResponseWriter, req *http.Request) {
 
 	numberOfKeys, err := client.Exists(context.Background(), "user:"+login).Uint64()
 	if err != nil {
-		panic(err)
+		handleError(w, req, http.StatusInternalServerError)
+		return
 	}
 	loginAvailability := "available"
 	if numberOfKeys != 0 {
@@ -278,6 +329,27 @@ func checkAvailability(w http.ResponseWriter, req *http.Request) {
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(data)
+}
+
+type handleErrorPageData struct {
+	StatusCode int
+	StatusText string
+}
+
+func handleError(w http.ResponseWriter, req *http.Request, code int) {
+	w.WriteHeader(code)
+	tmp, err := getTemplates(req)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	err = tmp.ExecuteTemplate(w, "error.html", &handleErrorPageData{
+		StatusCode: code,
+		StatusText: http.StatusText(code),
+	})
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+	}
 }
 
 func getRedisClient() *redis.Client {
@@ -299,7 +371,7 @@ func getRedisClient() *redis.Client {
 func main() {
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatal("Error loading .env file")
+		log.Print("Error loading .env file")
 	}
 
 	client = getRedisClient()
@@ -325,10 +397,10 @@ func main() {
 	r.HandleFunc("/sender/login", getLoginSender).Methods("GET")
 	r.HandleFunc("/sender/login", postLoginSender).Methods("POST")
 	r.HandleFunc("/sender/logout", logoutSender)
-	r.Handle("/sender/dashboard", handlers.SessionHandler(store, sessionName, http.HandlerFunc(showDashboard)))
-	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(getCreateLabel))).Methods("GET")
-	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(postCreateLabel))).Methods("POST")
-	r.Handle("/sender/labels/{labelId}/remove", handlers.SessionHandler(store, sessionName, http.HandlerFunc(removeLabel))).Methods("POST")
+	r.Handle("/sender/dashboard", handlers.SessionHandler(store, sessionName, http.HandlerFunc(showDashboard), handleError))
+	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(getCreateLabel), handleError)).Methods("GET")
+	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(postCreateLabel), handleError)).Methods("POST")
+	r.Handle("/sender/labels/{labelId}/remove", handlers.SessionHandler(store, sessionName, http.HandlerFunc(removeLabel), handleError)).Methods("POST")
 	r.HandleFunc("/check/{login}", checkAvailability)
 	http.Handle("/", r)
 
