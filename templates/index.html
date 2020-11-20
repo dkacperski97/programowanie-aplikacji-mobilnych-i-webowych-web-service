@@ -11,10 +11,19 @@
 			<section>
 				<h2>Niezawodna i szybka obsługa przewozów paczek</h2>
 				<p>
-					Tanio dostarczamy paczki w każde miejsce. Zarejestruj się już dzisiaj, aby uzyskać dostęp
-					do bogatej funkcjonalności naszego nowego systemu.
+					Tanio dostarczamy paczki w każde miejsce.
+					{{ if getSession }}
+					Przejdź do swojego kokpitu,
+					{{ else }}
+					Zarejestruj się już dzisiaj,
+					{{ end }}
+					aby uzyskać dostęp do bogatej funkcjonalności naszego nowego systemu.
 				</p>
+				{{ if getSession }}
+				<a class="regular-action" href="./sender/dashboard">Twój kokpit</a>
+				{{ else }}
 				<a class="regular-action" href="./sender/register">Zarejestruj</a>
+				{{ end }}
 			</section>
 		</main>
 		{{ template "footer.html" }}
