@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"log"
 	"net/http"
 
 	"github.com/rbcervilla/redisstore/v8"
@@ -18,7 +17,6 @@ func (h sessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 	session, err := h.store.Get(req, h.sessionName)
 	if err != nil {
 		h.eh(w, req, http.StatusInternalServerError)
-		log.Fatal("Failed getting session: ", err)
 		return
 	}
 
@@ -46,7 +44,6 @@ func (h withoutSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Reques
 	session, err := h.store.Get(req, h.sessionName)
 	if err != nil {
 		h.eh(w, req, http.StatusInternalServerError)
-		log.Fatal("Failed getting session: ", err)
 		return
 	}
 

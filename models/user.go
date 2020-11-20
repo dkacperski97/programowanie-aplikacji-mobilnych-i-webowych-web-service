@@ -40,13 +40,13 @@ func CreateUser(login, password, email, firstname, lastname, address string) (*U
 	return u, nil, nil
 }
 
-func Verify(client *redis.Client, login, password string) bool {
-	hash, err := client.HGet(context.Background(), "user:"+login, "passwordHash").Bytes()
+func Verify(client *redis.Client, login, password string) (bool, error) {
+	res, err := client.HGet(context.Background(), "user:"+login, "passwordHash").Result()
 	if err != nil {
-		return false
+		return false, err
 	}
-	err = bcrypt.CompareHashAndPassword(hash, []byte(password))
-	return err == nil
+	err = bcrypt.CompareHashAndPassword([]byte(res), []byte(password))
+	return err == nil, nil
 }
 
 func IsUserValid(login, password, email, firstname, lastname, address string) (error, error) {

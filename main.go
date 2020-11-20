@@ -5,6 +5,7 @@ import (
 	"encoding/gob"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"html/template"
 	"log"
 	"net/http"
@@ -26,32 +27,24 @@ var (
 	sessionName string
 )
 
-func getTemplates(req *http.Request) (*template.Template, error) {
+func getTemplates(req *http.Request) *template.Template {
 	session, err := store.Get(req, sessionName)
-	if err != nil {
-		return nil, err
-	}
-
 	tmp := template.New("_func").Funcs(template.FuncMap{
 		"getDate": time.Now,
 		"getSession": func() *sessions.Session {
-			if session.IsNew {
+			if err != nil || session.IsNew {
 				return nil
 			}
 			return session
 		},
 	})
 	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
-	return tmp, nil
+	return tmp
 }
 
 func index(w http.ResponseWriter, req *http.Request) {
-	tmp, err := getTemplates(req)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	err = tmp.ExecuteTemplate(w, "index.html", nil)
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "index.html", nil)
 	if err != nil {
 		handleError(w, req, http.StatusInternalServerError)
 	}
@@ -62,12 +55,8 @@ type registerSenderPageData struct {
 }
 
 func getRegisterSender(w http.ResponseWriter, req *http.Request) {
-	tmp, err := getTemplates(req)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
 		Error: nil,
 	})
 	if err != nil {
@@ -95,11 +84,7 @@ func postRegisterSender(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if validationErr != nil {
-		tmp, err := getTemplates(req)
-		if err != nil {
-			handleError(w, req, http.StatusInternalServerError)
-			return
-		}
+		tmp := getTemplates(req)
 		err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
 			Error: validationErr,
 		})
@@ -117,12 +102,8 @@ type loginSenderPageData struct {
 }
 
 func getLoginSender(w http.ResponseWriter, req *http.Request) {
-	tmp, err := getTemplates(req)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
 		Error: nil,
 	})
 	if err != nil {
@@ -137,14 +118,14 @@ func postLoginSender(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	isValid := models.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
+	isValid, err := models.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
+	if err != nil {
+		handleError(w, req, http.StatusInternalServerError)
+		return
+	}
 
 	if !isValid {
-		tmp, err := getTemplates(req)
-		if err != nil {
-			handleError(w, req, http.StatusInternalServerError)
-			return
-		}
+		tmp := getTemplates(req)
 		err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
 			Error: errors.New("Niepoprawne dane logowania"),
 		})
@@ -208,11 +189,7 @@ func showDashboard(w http.ResponseWriter, req *http.Request) {
 		handleError(w, req, http.StatusInternalServerError)
 		return
 	}
-	tmp, err := getTemplates(req)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
+	tmp := getTemplates(req)
 	err = tmp.ExecuteTemplate(w, "dashboard.html", &showDashboardPageData{
 		Labels: labels,
 	})
@@ -226,12 +203,8 @@ type createLabelPageData struct {
 }
 
 func getCreateLabel(w http.ResponseWriter, req *http.Request) {
-	tmp, err := getTemplates(req)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	err = tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
 		Error: nil,
 	})
 	if err != nil {
@@ -267,11 +240,7 @@ func postCreateLabel(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	if validationErr != nil {
-		tmp, err := getTemplates(req)
-		if err != nil {
-			handleError(w, req, http.StatusInternalServerError)
-			return
-		}
+		tmp := getTemplates(req)
 		err = tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
 			Error: validationErr,
 		})
@@ -338,17 +307,14 @@ type handleErrorPageData struct {
 
 func handleError(w http.ResponseWriter, req *http.Request, code int) {
 	w.WriteHeader(code)
-	tmp, err := getTemplates(req)
-	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	err = tmp.ExecuteTemplate(w, "error.html", &handleErrorPageData{
+	tmp := getTemplates(req)
+	err := tmp.ExecuteTemplate(w, "error.html", &handleErrorPageData{
 		StatusCode: code,
 		StatusText: http.StatusText(code),
 	})
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		fmt.Fprintln(w, http.StatusText(http.StatusInternalServerError))
+		return
 	}
 }
 
@@ -379,7 +345,7 @@ func main() {
 
 	store, err = redisstore.NewRedisStore(context.Background(), client)
 	if err != nil {
-		log.Fatal("Failed to create redis store: ", err)
+		log.Print("Failed to create redis store: ", err)
 	}
 	sessionName = os.Getenv("SESSION_NAME")
 	if sessionName == "" {
