@@ -41,11 +41,15 @@ func CreateUser(login, password, email, firstname, lastname, address string) (*U
 }
 
 func Verify(client *redis.Client, login, password string) (bool, error) {
-	res, err := client.HGet(context.Background(), "user:"+login, "passwordHash").Result()
+	res1, err := client.HExists(context.Background(), "user:"+login, "passwordHash").Result()
 	if err != nil {
 		return false, err
 	}
-	err = bcrypt.CompareHashAndPassword([]byte(res), []byte(password))
+	if res1 == false {
+		return false, nil
+	}
+	res2, _ := client.HGet(context.Background(), "user:"+login, "passwordHash").Result()
+	err = bcrypt.CompareHashAndPassword([]byte(res2), []byte(password))
 	return err == nil, nil
 }
 
