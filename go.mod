@@ -1,3 +1,5 @@
+// +heroku goVersion 1.15
+
 module example.com/project
 
 go 1.15
