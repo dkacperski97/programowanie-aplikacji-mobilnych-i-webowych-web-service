@@ -10,6 +10,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strconv"
 	"time"
 
 	"example.com/project/handlers"
@@ -328,10 +329,15 @@ func getRedisClient() *redis.Client {
 		redisHost = "localhost"
 	}
 	redisPass := os.Getenv("REDIS_PASS")
+	redisDbString := os.Getenv("REDIS_DB")
+	redisDb, err := strconv.Atoi(redisDbString)
+	if err != nil {
+		redisDb = 0
+	}
 	return redis.NewClient(&redis.Options{
 		Addr:     redisHost + ":" + redisPort,
 		Password: redisPass,
-		DB:       0,
+		DB:       redisDb,
 	})
 }
 
