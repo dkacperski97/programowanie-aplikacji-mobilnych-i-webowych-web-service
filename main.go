@@ -1,12 +1,9 @@
 package main
 
 import (
-	"context"
 	"encoding/gob"
 	"encoding/json"
-	"errors"
 	"fmt"
-	"html/template"
 	"log"
 	"net/http"
 	"os"
@@ -14,309 +11,154 @@ import (
 	"time"
 
 	"example.com/project/handlers"
-	"example.com/project/models"
+	"example.com/project/helpers"
+	models "github.com/dkacperski97/programowanie-aplikacji-mobilnych-i-webowych-models"
 	"github.com/go-redis/redis/v8"
 	"github.com/gorilla/mux"
-	"github.com/gorilla/sessions"
 	"github.com/joho/godotenv"
-	"github.com/rbcervilla/redisstore/v8"
+	"github.com/pmoule/go2hal/hal"
 )
 
-var (
-	client      *redis.Client
-	store       *redisstore.RedisStore
-	sessionName string
-)
+var client *redis.Client
 
-func getTemplates(req *http.Request) *template.Template {
-	session, err := store.Get(req, sessionName)
-	tmp := template.New("_func").Funcs(template.FuncMap{
-		"getDate": time.Now,
-		"getSession": func() *sessions.Session {
-			if err != nil || session.IsNew {
-				return nil
-			}
-			return session
-		},
-	})
-	tmp = template.Must(tmp.ParseGlob("templates/*.html"))
-	return tmp
+func getLabels(w http.ResponseWriter, req *http.Request) {
+	claims, _ := handlers.GetClaims(req.Context())
+
+	var labels []models.Label
+	var err error
+
+	if claims.Role == "sender" {
+		labels, err = helpers.GetLabelsBySender(client, claims.User)
+	} else {
+		labels, err = helpers.GetLabelsBySender(client, claims.User)
+	}
+
+	if err != nil {
+		log.Print(err.Error())
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	root := hal.NewResourceObject()
+
+	self, _ := hal.NewLinkRelation("self")
+	self.SetLink(&hal.LinkObject{Href: "/labels"})
+	root.AddLink(self)
+
+	var embeddedLabels []hal.Resource
+
+	for _, label := range labels {
+		href := fmt.Sprintf("/labels/%s", label.ID)
+		self, _ := hal.NewLinkRelation("self")
+		self.SetLink(&hal.LinkObject{Href: href})
+
+		embeddedLabel := hal.NewResourceObject()
+		embeddedLabel.AddLink(self)
+		embeddedLabel.AddData(label)
+		embeddedLabels = append(embeddedLabels, embeddedLabel)
+	}
+
+	labelsRelation, _ := hal.NewResourceRelation("labels")
+	labelsRelation.SetResources(embeddedLabels)
+
+	root.AddResource(labelsRelation)
+
+	bytes, err := hal.NewEncoder().ToJSON(root)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/hal+json")
+	w.Write(bytes)
 }
 
-func index(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "index.html", nil)
+func createLabel(w http.ResponseWriter, req *http.Request) {
+	claims, _ := handlers.GetClaims(req.Context())
+
+	if claims.Role != "sender" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	headerContentType := req.Header.Get("Content-Type")
+	if headerContentType != "application/json" {
+		http.Error(w, "Content Type is not application/json", http.StatusUnsupportedMediaType)
+		return
+	}
+
+	var label *models.Label
+
+	decoder := json.NewDecoder(req.Body)
+	decoder.DisallowUnknownFields()
+	err := decoder.Decode(label)
 	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
 	}
-}
 
-type registerSenderPageData struct {
-	Error error
-}
+	if label.Sender != claims.User {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
 
-func getRegisterSender(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
-		Error: nil,
-	})
+	err = helpers.SaveLabel(client, label)
 	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-	}
-}
-
-func postRegisterSender(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 
-	user, validationErr, err := models.CreateUser(
-		req.Form.Get("login"),
-		req.Form.Get("password"),
-		req.Form.Get("email"),
-		req.Form.Get("firstname"),
-		req.Form.Get("lastname"),
-		req.Form.Get("address"),
-	)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	if validationErr != nil {
-		tmp := getTemplates(req)
-		err = tmp.ExecuteTemplate(w, "signUpSender.html", &registerSenderPageData{
-			Error: validationErr,
-		})
-		if err != nil {
-			handleError(w, req, http.StatusInternalServerError)
-		}
-		return
-	}
-	user.Save(client)
-	http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
-}
-
-type loginSenderPageData struct {
-	Error error
-}
-
-func getLoginSender(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
-		Error: nil,
-	})
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-	}
-}
-
-func postLoginSender(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	isValid, err := models.Verify(client, req.Form.Get("login"), req.Form.Get("password"))
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	if !isValid {
-		tmp := getTemplates(req)
-		err = tmp.ExecuteTemplate(w, "loginSender.html", &registerSenderPageData{
-			Error: errors.New("Niepoprawne dane logowania"),
-		})
-		if err != nil {
-			handleError(w, req, http.StatusInternalServerError)
-		}
-		return
-	}
-
-	session, err := store.Get(req, sessionName)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	session.Values["user"] = req.Form.Get("login")
-	session.Values["loginTime"] = time.Now()
-
-	if err = sessions.Save(req, w); err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, req, "/", http.StatusSeeOther)
-}
-
-func logoutSender(w http.ResponseWriter, req *http.Request) {
-	session, err := store.Get(req, sessionName)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	session.Options.MaxAge = -1
-
-	if err = sessions.Save(req, w); err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	http.Redirect(w, req, "/", http.StatusSeeOther)
-}
-
-type showDashboardPageData struct {
-	Labels []models.Label
-}
-
-func showDashboard(w http.ResponseWriter, req *http.Request) {
-	session, err := store.Get(req, sessionName)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	sender, exists := session.Values["user"]
-	if exists == false {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	labels, err := models.GetLabelsBySender(client, sender.(string))
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	tmp := getTemplates(req)
-	err = tmp.ExecuteTemplate(w, "dashboard.html", &showDashboardPageData{
-		Labels: labels,
-	})
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-	}
-}
-
-type createLabelPageData struct {
-	Error error
-}
-
-func getCreateLabel(w http.ResponseWriter, req *http.Request) {
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
-		Error: nil,
-	})
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-}
-
-func postCreateLabel(w http.ResponseWriter, req *http.Request) {
-	err := req.ParseForm()
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	session, err := store.Get(req, sessionName)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	sender, exists := session.Values["user"]
-	if exists == false {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	label, validationErr, err := models.CreateLabel(
-		sender.(string),
-		req.Form.Get("recipient"),
-		req.Form.Get("locker"),
-		req.Form.Get("size"),
-	)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	if validationErr != nil {
-		tmp := getTemplates(req)
-		err = tmp.ExecuteTemplate(w, "createLabel.html", &createLabelPageData{
-			Error: validationErr,
-		})
-		if err != nil {
-			handleError(w, req, http.StatusInternalServerError)
-		}
-		return
-	}
-	label.Save(client)
-	http.Redirect(w, req, "/sender/dashboard", http.StatusSeeOther)
+	w.WriteHeader(http.StatusCreated)
+	w.Header().Set("Location", "/labels/"+string(label.ID))
 }
 
 func removeLabel(w http.ResponseWriter, req *http.Request) {
 	vars := mux.Vars(req)
 	labelID := vars["labelId"]
 
-	session, err := store.Get(req, sessionName)
-	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
-		return
-	}
-	sender, exists := session.Values["user"]
-	if exists == false {
-		handleError(w, req, http.StatusInternalServerError)
+	claims, _ := handlers.GetClaims(req.Context())
+
+	if claims.Role != "sender" {
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
-	err = models.RemoveLabel(
+	err := helpers.RemoveLabel(
 		client,
-		sender.(string),
+		claims.User,
 		labelID,
 	)
 	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	http.Redirect(w, req, "/sender/dashboard", http.StatusSeeOther)
+
+	w.WriteHeader(http.StatusOK)
 }
 
-func checkAvailability(w http.ResponseWriter, req *http.Request) {
-	vars := mux.Vars(req)
-	login := vars["login"]
+func index(w http.ResponseWriter, req *http.Request) {
+	_, ok := handlers.GetClaims(req.Context())
 
-	numberOfKeys, err := client.Exists(context.Background(), "user:"+login).Uint64()
+	root := hal.NewResourceObject()
+
+	self, _ := hal.NewLinkRelation("self")
+	self.SetLink(&hal.LinkObject{Href: "/"})
+	root.AddLink(self)
+
+	if ok {
+		labels, _ := hal.NewLinkRelation("labels")
+		labels.SetLink(&hal.LinkObject{Href: "/labels"})
+		root.AddLink(labels)
+	}
+
+	bytes, err := hal.NewEncoder().ToJSON(root)
 	if err != nil {
-		handleError(w, req, http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
-	loginAvailability := "available"
-	if numberOfKeys != 0 {
-		loginAvailability = "taken"
-	}
-	data := map[string]interface{}{
-		login: loginAvailability,
-	}
-	w.Header().Set("Content-Type", "application/json")
-	json.NewEncoder(w).Encode(data)
-}
 
-type handleErrorPageData struct {
-	StatusCode int
-	StatusText string
-}
-
-func handleError(w http.ResponseWriter, req *http.Request, code int) {
-	w.WriteHeader(code)
-	tmp := getTemplates(req)
-	err := tmp.ExecuteTemplate(w, "error.html", &handleErrorPageData{
-		StatusCode: code,
-		StatusText: http.StatusText(code),
-	})
-	if err != nil {
-		fmt.Fprintln(w, http.StatusText(http.StatusInternalServerError))
-		return
-	}
+	w.Header().Set("Content-Type", "application/hal+json")
+	w.Write(bytes)
 }
 
 func getRedisClient() *redis.Client {
@@ -350,44 +192,27 @@ func main() {
 	client = getRedisClient()
 	defer client.Close()
 
-	store, err = redisstore.NewRedisStore(context.Background(), client)
-	if err != nil {
-		log.Print("Failed to create redis store: ", err)
-	}
-	var secureCookie bool
-	if os.Getenv("SECURE_COOKIE") == "" || os.Getenv("SECURE_COOKIE") == "FALSE" {
-		secureCookie = false
-	} else {
-		secureCookie = true
-	}
-	store.Options(sessions.Options{
-		Secure:   secureCookie,
-		HttpOnly: true,
-		Path:     "/",
-		MaxAge:   60 * 60 * 24,
-	})
-	sessionName = os.Getenv("SESSION_NAME")
-	if sessionName == "" {
-		sessionName = "session"
-	}
 	gob.Register(&time.Time{})
 
-	fs := http.FileServer(http.Dir("./static"))
-	http.Handle("/static/", http.StripPrefix("/static/", fs))
+	mainRouter := mux.NewRouter()
+	mainRouter.Handle("/", handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), http.HandlerFunc(index), false)).Methods(http.MethodGet, http.MethodOptions)
+	r := mainRouter.PathPrefix("/").Subrouter()
+	r.Handle("/labels", http.HandlerFunc(getLabels)).Methods(http.MethodGet)
+	r.Handle("/labels", http.HandlerFunc(createLabel)).Methods(http.MethodPost)
+	r.Handle("/labels/{labelId}", http.HandlerFunc(removeLabel)).Methods(http.MethodDelete)
+	// mainRouter.PathPrefix("/").Handler(handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), r, true)).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 
-	r := mux.NewRouter()
-	r.HandleFunc("/", index)
-	r.Handle("/sender/register", handlers.WithoutSessionHandler(store, sessionName, http.HandlerFunc(getRegisterSender), handleError)).Methods("GET")
-	r.Handle("/sender/register", handlers.WithoutSessionHandler(store, sessionName, http.HandlerFunc(postRegisterSender), handleError)).Methods("POST")
-	r.Handle("/sender/login", handlers.WithoutSessionHandler(store, sessionName, http.HandlerFunc(getLoginSender), handleError)).Methods("GET")
-	r.Handle("/sender/login", handlers.WithoutSessionHandler(store, sessionName, http.HandlerFunc(postLoginSender), handleError)).Methods("POST")
-	r.Handle("/sender/logout", handlers.SessionHandler(store, sessionName, http.HandlerFunc(logoutSender), handleError))
-	r.Handle("/sender/dashboard", handlers.SessionHandler(store, sessionName, http.HandlerFunc(showDashboard), handleError))
-	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(getCreateLabel), handleError)).Methods("GET")
-	r.Handle("/sender/labels/create", handlers.SessionHandler(store, sessionName, http.HandlerFunc(postCreateLabel), handleError)).Methods("POST")
-	r.Handle("/sender/labels/{labelId}/remove", handlers.SessionHandler(store, sessionName, http.HandlerFunc(removeLabel), handleError)).Methods("POST")
-	r.HandleFunc("/check/{login}", checkAvailability)
-	http.Handle("/", r)
+	mainRouter.Use(mux.CORSMethodMiddleware(mainRouter))
+	mainRouter.Use(func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			if req.Method == http.MethodOptions {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, req)
+		})
+	})
+	http.Handle("/", mainRouter)
 
 	port := os.Getenv("PORT")
 	if port == "" {

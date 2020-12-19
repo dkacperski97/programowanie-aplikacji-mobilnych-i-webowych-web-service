@@ -1,61 +1,59 @@
 package handlers
 
 import (
+	"context"
+	"fmt"
 	"net/http"
+	"strings"
 
-	"github.com/rbcervilla/redisstore/v8"
+	jwt "github.com/dgrijalva/jwt-go"
+	models "github.com/dkacperski97/programowanie-aplikacji-mobilnych-i-webowych-models"
 )
 
-type sessionHandler struct {
-	store       *redisstore.RedisStore
-	sessionName string
-	handler     http.Handler
-	eh          func(w http.ResponseWriter, req *http.Request, code int)
-}
+type (
+	tokenKey   string
+	jwtHandler struct {
+		secret          []byte
+		handler         http.Handler
+		isTokenRequired bool
+	}
+)
 
-func (h sessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	session, err := h.store.Get(req, h.sessionName)
-	if err != nil {
-		h.eh(w, req, http.StatusInternalServerError)
-		return
+const key tokenKey = "ParsedToken"
+
+func (h jwtHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	tokenString := strings.Replace(req.Header.Get("Authorization"), "Bearer ", "", 1)
+
+	token, err := jwt.ParseWithClaims(tokenString, &models.UserClaims{}, func(token *jwt.Token) (interface{}, error) {
+		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", token.Header["alg"])
+		}
+
+		return h.secret, nil
+	})
+
+	if err == nil {
+		if claims, ok := token.Claims.(*models.UserClaims); ok && token.Valid {
+			ctx := context.WithValue(req.Context(), key, claims)
+			h.handler.ServeHTTP(w, req.WithContext(ctx))
+			return
+		}
 	}
 
-	if session.IsNew {
-		http.Redirect(w, req, "/sender/login", http.StatusSeeOther)
-		return
-	}
-
-	h.handler.ServeHTTP(w, req)
-}
-
-// SessionHandler return a http.Handler that wraps h and checks if the session is available
-func SessionHandler(store *redisstore.RedisStore, sessionName string, h http.Handler, eh func(w http.ResponseWriter, req *http.Request, code int)) http.Handler {
-	return sessionHandler{store, sessionName, h, eh}
-}
-
-type withoutSessionHandler struct {
-	store       *redisstore.RedisStore
-	sessionName string
-	handler     http.Handler
-	eh          func(w http.ResponseWriter, req *http.Request, code int)
-}
-
-func (h withoutSessionHandler) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	session, err := h.store.Get(req, h.sessionName)
-	if err != nil {
-		h.eh(w, req, http.StatusInternalServerError)
-		return
-	}
-
-	if session.IsNew {
+	if !h.isTokenRequired {
 		h.handler.ServeHTTP(w, req)
 		return
 	}
 
-	http.Redirect(w, req, "/", http.StatusSeeOther)
+	http.Error(w, "Incorrect authorization header", http.StatusBadRequest)
 }
 
-// SessionHandler return a http.Handler that wraps h and checks if the session is not available
-func WithoutSessionHandler(store *redisstore.RedisStore, sessionName string, h http.Handler, eh func(w http.ResponseWriter, req *http.Request, code int)) http.Handler {
-	return withoutSessionHandler{store, sessionName, h, eh}
+func GetClaims(ctx context.Context) (*models.UserClaims, bool) {
+	claims, ok := ctx.Value(key).(*models.UserClaims)
+	return claims, ok
+}
+
+// JwtHandler return a http.Handler that wraps h and checks if the jwt token is correct
+func JwtHandler(secret []byte, h http.Handler, isTokenRequired bool) http.Handler {
+	return jwtHandler{secret, h, isTokenRequired}
 }
