@@ -8,6 +8,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"strings"
 	"time"
 
 	"example.com/project/handlers"
@@ -87,11 +88,11 @@ func createLabel(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	var label *models.Label
+	var label models.Label
 
 	decoder := json.NewDecoder(req.Body)
 	decoder.DisallowUnknownFields()
-	err := decoder.Decode(label)
+	err := decoder.Decode(&label)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
@@ -102,7 +103,7 @@ func createLabel(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 
-	err = helpers.SaveLabel(client, label)
+	err = helpers.SaveLabel(client, &label)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
@@ -183,6 +184,41 @@ func getRedisClient() *redis.Client {
 	})
 }
 
+func indexOptions(w http.ResponseWriter, req *http.Request) {
+	allowedMethods := []string{
+		http.MethodOptions,
+		http.MethodGet,
+	}
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func labelsOptions(w http.ResponseWriter, req *http.Request) {
+	allowedMethods := []string{
+		http.MethodOptions,
+		http.MethodGet,
+	}
+
+	claims, _ := handlers.GetClaims(req.Context())
+	if claims.Role == "sender" {
+		allowedMethods = append(allowedMethods, http.MethodPost)
+	}
+
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func labelOptions(w http.ResponseWriter, req *http.Request) {
+	allowedMethods := []string{
+		http.MethodOptions,
+	}
+	if true { // TODO
+		allowedMethods = append(allowedMethods, http.MethodDelete)
+	}
+	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func main() {
 	err := godotenv.Load()
 	if err == nil {
@@ -195,23 +231,20 @@ func main() {
 	gob.Register(&time.Time{})
 
 	mainRouter := mux.NewRouter()
-	mainRouter.Handle("/", handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), http.HandlerFunc(index), false)).Methods(http.MethodGet, http.MethodOptions)
-	r := mainRouter.PathPrefix("/").Subrouter()
-	r.Handle("/labels", http.HandlerFunc(getLabels)).Methods(http.MethodGet)
-	r.Handle("/labels", http.HandlerFunc(createLabel)).Methods(http.MethodPost)
-	r.Handle("/labels/{labelId}", http.HandlerFunc(removeLabel)).Methods(http.MethodDelete)
-	// mainRouter.PathPrefix("/").Handler(handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), r, true)).Methods(http.MethodGet, http.MethodPost, http.MethodDelete, http.MethodOptions)
 
-	mainRouter.Use(mux.CORSMethodMiddleware(mainRouter))
-	mainRouter.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			if req.Method == http.MethodOptions {
-				w.WriteHeader(http.StatusNoContent)
-				return
-			}
-			next.ServeHTTP(w, req)
-		})
-	})
+	r := mainRouter.PathPrefix("/").Subrouter()
+	r.HandleFunc("/", http.HandlerFunc(index)).Methods(http.MethodGet)
+	r.HandleFunc("/", http.HandlerFunc(indexOptions)).Methods(http.MethodOptions)
+	r.Use(handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), false))
+
+	r2 := mainRouter.PathPrefix("/").Subrouter()
+	r2.HandleFunc("/labels", http.HandlerFunc(getLabels)).Methods(http.MethodGet)
+	r2.HandleFunc("/labels", http.HandlerFunc(createLabel)).Methods(http.MethodPost)
+	r2.HandleFunc("/labels", http.HandlerFunc(labelsOptions)).Methods(http.MethodOptions)
+	r2.HandleFunc("/labels/{labelId}", http.HandlerFunc(removeLabel)).Methods(http.MethodDelete)
+	r2.HandleFunc("/labels/{labelId}", http.HandlerFunc(labelOptions)).Methods(http.MethodOptions)
+	r2.Use(handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), true))
+
 	http.Handle("/", mainRouter)
 
 	port := os.Getenv("PORT")
