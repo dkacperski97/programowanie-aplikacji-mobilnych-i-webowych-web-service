@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 
 	jwt "github.com/dgrijalva/jwt-go"
@@ -49,6 +50,23 @@ func JwtHandler(secret []byte, isTokenRequired bool) mux.MiddlewareFunc {
 			}
 
 			http.Error(w, "Incorrect authorization header", http.StatusBadRequest)
+		})
+	}
+}
+
+func HeadersHandler() mux.MiddlewareFunc {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
+			w.Header().Set("Access-Control-Allow-Headers", "Authorization,Content-Type")
+			origin := req.Header.Get("Origin")
+			if origin == os.Getenv("APP_1_ORIGIN") || origin == os.Getenv("APP_2_ORIGIN") {
+				w.Header().Set("Access-Control-Allow-Origin", origin)
+			}
+			if req.Method == http.MethodOptions && w.Header().Get("Access-Control-Allow-Methods") != "" {
+				w.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(w, req)
 		})
 	}
 }

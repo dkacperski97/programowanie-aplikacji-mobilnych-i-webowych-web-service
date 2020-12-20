@@ -8,7 +8,6 @@ import (
 	"net/http"
 	"os"
 	"strconv"
-	"strings"
 	"time"
 
 	"example.com/project/handlers"
@@ -160,12 +159,12 @@ func index(w http.ResponseWriter, req *http.Request) {
 		labels, _ := hal.NewLinkRelation("labels")
 		labels.SetLink(&hal.LinkObject{Href: "/labels"})
 		root.AddLink(labels)
-	}
 
-	if claims.Role != "sender" {
-		parcels, _ := hal.NewLinkRelation("parcels")
-		parcels.SetLink(&hal.LinkObject{Href: "/parcels"})
-		root.AddLink(parcels)
+		if claims.Role != "sender" {
+			parcels, _ := hal.NewLinkRelation("parcels")
+			parcels.SetLink(&hal.LinkObject{Href: "/parcels"})
+			root.AddLink(parcels)
+		}
 	}
 
 	bytes, err := hal.NewEncoder().ToJSON(root)
@@ -198,61 +197,6 @@ func getRedisClient() *redis.Client {
 		Password: redisPass,
 		DB:       redisDb,
 	})
-}
-
-func indexOptions(w http.ResponseWriter, req *http.Request) {
-	allowedMethods := []string{
-		http.MethodOptions,
-		http.MethodGet,
-	}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func labelsOptions(w http.ResponseWriter, req *http.Request) {
-	allowedMethods := []string{
-		http.MethodOptions,
-		http.MethodGet,
-	}
-
-	claims, ok := handlers.GetClaims(req.Context())
-	if ok && claims.Role == "sender" {
-		allowedMethods = append(allowedMethods, http.MethodPost)
-	}
-
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func labelOptions(w http.ResponseWriter, req *http.Request) {
-	allowedMethods := []string{
-		http.MethodOptions,
-	}
-	claims, ok := handlers.GetClaims(req.Context())
-	if ok && claims.Role == "sender" && true { // TODO
-		allowedMethods = append(allowedMethods, http.MethodDelete)
-	}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func parcelsOptions(w http.ResponseWriter, req *http.Request) {
-	allowedMethods := []string{
-		http.MethodOptions,
-		http.MethodGet,
-		http.MethodPost,
-	}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
-	w.WriteHeader(http.StatusNoContent)
-}
-
-func parcelOptions(w http.ResponseWriter, req *http.Request) {
-	allowedMethods := []string{
-		http.MethodOptions,
-		http.MethodPut,
-	}
-	w.Header().Set("Access-Control-Allow-Methods", strings.Join(allowedMethods, ","))
-	w.WriteHeader(http.StatusNoContent)
 }
 
 func getParcels(w http.ResponseWriter, req *http.Request) {
@@ -416,35 +360,21 @@ func main() {
 	mainRouter := mux.NewRouter()
 
 	r2 := mainRouter.PathPrefix("/").Subrouter()
-	r2.HandleFunc("/labels", http.HandlerFunc(getLabels)).Methods(http.MethodGet)
-	r2.HandleFunc("/labels", http.HandlerFunc(createLabel)).Methods(http.MethodPost)
-	r2.HandleFunc("/labels", http.HandlerFunc(labelsOptions)).Methods(http.MethodOptions)
-	r2.HandleFunc("/labels/{labelId}", http.HandlerFunc(removeLabel)).Methods(http.MethodDelete)
-	r2.HandleFunc("/labels/{labelId}", http.HandlerFunc(labelOptions)).Methods(http.MethodOptions)
-	r2.HandleFunc("/parcels", http.HandlerFunc(getParcels)).Methods(http.MethodGet)
-	r2.HandleFunc("/parcels", http.HandlerFunc(createParcel)).Methods(http.MethodPost)
-	r2.HandleFunc("/parcels", http.HandlerFunc(parcelsOptions)).Methods(http.MethodOptions)
-	r2.HandleFunc("/parcels/{parcelId}", http.HandlerFunc(changeParcelStatus)).Methods(http.MethodPut)
-	r2.HandleFunc("/parcels/{parcelId}", http.HandlerFunc(parcelOptions)).Methods(http.MethodOptions)
+	r2.HandleFunc("/labels", http.HandlerFunc(getLabels)).Methods(http.MethodGet, http.MethodOptions)
+	r2.HandleFunc("/labels", http.HandlerFunc(createLabel)).Methods(http.MethodPost, http.MethodOptions)
+	r2.HandleFunc("/labels/{labelId}", http.HandlerFunc(removeLabel)).Methods(http.MethodDelete, http.MethodOptions)
+	r2.HandleFunc("/parcels", http.HandlerFunc(getParcels)).Methods(http.MethodGet, http.MethodOptions)
+	r2.HandleFunc("/parcels", http.HandlerFunc(createParcel)).Methods(http.MethodPost, http.MethodOptions)
+	r2.HandleFunc("/parcels/{parcelId}", http.HandlerFunc(changeParcelStatus)).Methods(http.MethodPut, http.MethodOptions)
+	r2.Use(mux.CORSMethodMiddleware(r2))
 	r2.Use(handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), true))
+	r2.Use(handlers.HeadersHandler())
 
 	r := mainRouter.PathPrefix("/").Subrouter()
-	r.HandleFunc("/", http.HandlerFunc(index)).Methods(http.MethodGet)
-	r.HandleFunc("/", http.HandlerFunc(indexOptions)).Methods(http.MethodOptions)
+	r.HandleFunc("/", http.HandlerFunc(index)).Methods(http.MethodGet, http.MethodOptions)
+	r.Use(mux.CORSMethodMiddleware(r))
 	r.Use(handlers.JwtHandler([]byte(os.Getenv("JWT_SECRET")), false))
-
-	mainRouter.Use(func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
-			origin := req.Header.Get("Origin")
-			if origin == os.Getenv("APP_1_ORIGIN") || origin == os.Getenv("APP_2_ORIGIN") {
-				w.Header().Set("Access-Control-Allow-Origin", origin)
-			}
-			w.Header().Set("Access-Control-Allow-Headers", "Authorization,Content-Type")
-			w.Header().Set("Access-Control-Expose-Headers", "Access-Control-Allow-Methods")
-			w.Header().Set("Cache-Control", "no-cache")
-			next.ServeHTTP(w, req)
-		})
-	})
+	r.Use(handlers.HeadersHandler())
 
 	http.Handle("/", mainRouter)
 
