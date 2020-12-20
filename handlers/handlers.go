@@ -43,7 +43,7 @@ func JwtHandler(secret []byte, isTokenRequired bool) mux.MiddlewareFunc {
 				}
 			}
 
-			if !isTokenRequired {
+			if !isTokenRequired || req.Method == http.MethodOptions {
 				next.ServeHTTP(w, req)
 				return
 			}

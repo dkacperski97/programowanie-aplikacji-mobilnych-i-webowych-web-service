@@ -3,6 +3,7 @@ package helpers
 import (
 	"context"
 	"strconv"
+	"strings"
 
 	models "github.com/dkacperski97/programowanie-aplikacji-mobilnych-i-webowych-models"
 	"github.com/go-redis/redis/v8"
@@ -43,11 +44,40 @@ func GetLabelsBySender(client *redis.Client, sender string) ([]models.Label, err
 			return nil, err
 		}
 		label := models.Label{
-			ID:        models.LabelID(id),
-			Sender:    val["sender"],
-			Recipient: val["recipient"],
-			Locker:    val["locker"],
-			Size:      size,
+			ID:             models.LabelID(id),
+			Sender:         val["sender"],
+			Recipient:      val["recipient"],
+			Locker:         val["locker"],
+			Size:           size,
+			AssignedParcel: val["assignedParcel"],
+		}
+		labels = append(labels, label)
+	}
+	return labels, nil
+}
+
+func GetLabels(client *redis.Client) ([]models.Label, error) {
+	val, err := client.Keys(context.Background(), "label*").Result()
+	if err != nil {
+		return nil, err
+	}
+	labels := []models.Label{}
+	for _, id := range val {
+		val, err := client.HGetAll(context.Background(), id).Result()
+		if err != nil {
+			return nil, err
+		}
+		size, err := strconv.Atoi(val["size"])
+		if err != nil {
+			return nil, err
+		}
+		label := models.Label{
+			ID:             models.LabelID(strings.Replace(id, "label:", "", 1)),
+			Sender:         val["sender"],
+			Recipient:      val["recipient"],
+			Locker:         val["locker"],
+			Size:           size,
+			AssignedParcel: val["assignedParcel"],
 		}
 		labels = append(labels, label)
 	}

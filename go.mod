@@ -7,7 +7,7 @@ go 1.15
 require (
 	github.com/RichardKnop/jsonhal v0.0.0-20181101035658-9ef775cfa6bf
 	github.com/dgrijalva/jwt-go v3.2.0+incompatible
-	github.com/dkacperski97/programowanie-aplikacji-mobilnych-i-webowych-models v0.2.0
+	github.com/dkacperski97/programowanie-aplikacji-mobilnych-i-webowych-models v0.3.0
 	github.com/go-redis/redis v6.15.9+incompatible
 	github.com/go-redis/redis/v8 v8.3.3
 	github.com/google/uuid v1.1.2
