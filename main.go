@@ -114,7 +114,7 @@ func createLabel(w http.ResponseWriter, req *http.Request) {
 
 	err = helpers.SaveLabel(client, &label)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
@@ -139,7 +139,7 @@ func removeLabel(w http.ResponseWriter, req *http.Request) {
 		labelID,
 	)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 
@@ -290,7 +290,7 @@ func createParcel(w http.ResponseWriter, req *http.Request) {
 
 	err = parcel.Save(client)
 	if err != nil {
-		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
 		return
 	}
 

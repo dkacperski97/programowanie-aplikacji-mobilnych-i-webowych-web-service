@@ -48,8 +48,15 @@ func IsParcelValid(labelID, status string) (error, error) {
 }
 
 func (parcel *Parcel) Save(client *redis.Client) error {
+	val, err := client.HGet(context.Background(), "label:"+parcel.LabelID, "assignedParcel").Result()
+	if err != nil && err != redis.Nil {
+		return err
+	}
+	if val != "" {
+		return errors.New("Label already assigned")
+	}
 	id := uuid.New().String()
-	err := client.HSet(context.Background(), "parcel:"+id, map[string]interface{}{
+	err = client.HSet(context.Background(), "parcel:"+id, map[string]interface{}{
 		"labelId": parcel.LabelID,
 		"status":  parcel.Status,
 	}).Err()
