@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/gob"
 	"encoding/json"
 	"fmt"
@@ -291,6 +292,40 @@ func createParcel(w http.ResponseWriter, req *http.Request) {
 	err = parcel.Save(client)
 	if err != nil {
 		http.Error(w, http.StatusText(http.StatusBadRequest), http.StatusBadRequest)
+		return
+	}
+
+	labelData, err := helpers.GetLabel(client, string(label.ID))
+
+	type Notification struct {
+		User    string `json:"user"`
+		Message string `json:"message"`
+	}
+	notification := Notification{
+		User:    labelData.Sender,
+		Message: "Etykieta, której adresatem jest " + labelData.Recipient + ", została przypisana do paczki.",
+	}
+
+	body, err := json.Marshal(notification)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	request, err := http.NewRequest(
+		http.MethodPost,
+		os.Getenv("NOTIFICATION_SERVICE_URL")+"/notifications",
+		bytes.NewBuffer(body),
+	)
+	if err != nil {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	request.Header.Set("Content-type", "application/json")
+	request.Header.Set("Authorization", req.Header.Get("Authorization"))
+	httpClient := &http.Client{}
+	resp, err := httpClient.Do(request)
+	if err != nil || resp.StatusCode != http.StatusCreated {
+		http.Error(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
 		return
 	}
 

@@ -56,6 +56,26 @@ func GetLabelsBySender(client *redis.Client, sender string) ([]models.Label, err
 	return labels, nil
 }
 
+func GetLabel(client *redis.Client, labelID string) (*models.Label, error) {
+	val, err := client.HGetAll(context.Background(), "label:"+labelID).Result()
+	if err != nil {
+		return nil, err
+	}
+	size, err := strconv.Atoi(val["size"])
+	if err != nil {
+		return nil, err
+	}
+	label := models.Label{
+		ID:             models.LabelID(labelID),
+		Sender:         val["sender"],
+		Recipient:      val["recipient"],
+		Locker:         val["locker"],
+		Size:           size,
+		AssignedParcel: val["assignedParcel"],
+	}
+	return &label, nil
+}
+
 func GetLabels(client *redis.Client) ([]models.Label, error) {
 	val, err := client.Keys(context.Background(), "label*").Result()
 	if err != nil {
